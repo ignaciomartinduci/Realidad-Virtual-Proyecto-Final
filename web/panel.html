@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel Docente</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=DM+Mono:wght@300;400;500&display=swap');
+
+  :root {
+    --bg:       #ffffff;
+    --surface:  #f7f5f0;
+    --border:   #ddd9ce;
+    --text:     #16150f;
+    --muted:    #8a8270;
+    --accent:   #8a6830;
+    --accent-l: #f0e8d8;
+    --error:    #a04a28;
+    --ok:       #3a6e3a;
+    --ok-l:     #e8f0e8;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'EB Garamond', Georgia, serif;
+    -webkit-font-smoothing: antialiased;
+    font-size: 16px;
+  }
+
+  .shell {
+    height: 100vh;
+    display: grid;
+    grid-template-rows: 52px 1fr;
+    grid-template-columns: 340px 1fr;
+    grid-template-areas:
+      "topbar topbar"
+      "sidebar main";
+  }
+
+  /* TOPBAR */
+  .topbar {
+    grid-area: topbar;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 28px;
+  }
+
+  .topbar-title { font-size: 1rem; font-weight: 500; }
+
+  .topbar-right { display: flex; align-items: center; gap: 20px; }
+
+  .sync-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 2px;
+    background: var(--surface);
+    color: var(--muted);
+    border: 1px solid var(--border);
+    transition: background 0.3s, color 0.3s, border-color 0.3s;
+  }
+
+  .sync-badge.active {
+    background: var(--ok-l);
+    color: var(--ok);
+    border-color: #b8d4b8;
+  }
+
+  .topbar-meta {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.62rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    grid-area: sidebar;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .sidebar-header {
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+
+  .sidebar-header h2 {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.62rem;
+    font-weight: 400;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .client-count {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+  }
+
+  .client-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 6px 0;
+  }
+
+  .client-list::-webkit-scrollbar { width: 3px; }
+  .client-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .client-item {
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--surface);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px 10px;
+    align-items: start;
+    transition: background 0.15s;
+    animation: slideIn 0.2s ease both;
+  }
+
+  .client-item:hover { background: var(--surface); }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-6px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  .client-name {
+    font-size: 0.92rem;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .client-meta {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.58rem;
+    color: var(--muted);
+    margin-top: 3px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .role-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.54rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 1px 6px;
+    border-radius: 2px;
+    background: var(--surface);
+    color: var(--muted);
+    border: 1px solid var(--border);
+    display: inline-block;
+    margin-bottom: 4px;
+  }
+
+  .role-tag.asistente {
+    background: var(--accent-l);
+    color: var(--accent);
+    border-color: #d4b880;
+  }
+
+  .client-actions { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
+
+  .btn-role {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.56rem;
+    letter-spacing: 0.06em;
+    padding: 3px 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .btn-promote:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-l); }
+  .btn-demote:hover  { border-color: var(--error);  color: var(--error);  background: #f8ede8; }
+
+  .empty-list {
+    padding: 40px 20px;
+    text-align: center;
+    font-style: italic;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+
+  /* MAIN */
+  .main {
+    grid-area: main;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .section {
+    border-bottom: 1px solid var(--border);
+    padding: 18px 28px;
+    flex-shrink: 0;
+  }
+
+  .section-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  /* SYNC */
+  .param-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr) auto auto;
+    gap: 10px;
+    align-items: end;
+  }
+
+  .field { display: flex; flex-direction: column; gap: 4px; }
+
+  .field label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.58rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .field input, .field select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 6px 10px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.76rem;
+    color: var(--text);
+    outline: none;
+    border-radius: 2px;
+    transition: border-color 0.15s;
+    width: 100%;
+  }
+
+  .field input:focus, .field select:focus { border-color: var(--accent); }
+
+  .btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 7px 14px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.15s;
+    white-space: nowrap;
+    align-self: end;
+  }
+
+  .btn-primary { background: var(--text); border-color: var(--text); color: var(--bg); }
+  .btn-primary:hover { background: var(--accent); border-color: var(--accent); }
+  .btn-danger  { border-color: var(--error); color: var(--error); }
+  .btn-danger:hover { background: #f8ede8; }
+  .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  /* VISUALIZACION */
+  .viz-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 18px 28px 20px;
+  }
+
+  .canvas-wrap {
+    flex: 1;
+    position: relative;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    background: var(--surface);
+    overflow: hidden;
+    min-height: 0;
+    margin-top: 12px;
+  }
+
+  canvas { display: block; width: 100%; height: 100%; }
+
+  .viz-placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-style: italic;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+
+  .playbar {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .btn-play {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 5px 12px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.15s;
+    min-width: 56px;
+  }
+
+  .btn-play:hover  { border-color: var(--accent); color: var(--accent); }
+  .btn-play:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  .progress-wrap {
+    flex: 1;
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    cursor: pointer;
+    position: relative;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    width: 0%;
+    pointer-events: none;
+  }
+
+  .frame-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.58rem;
+    color: var(--muted);
+    min-width: 80px;
+    text-align: right;
+  }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 22px;
+    right: 22px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    padding: 9px 14px;
+    border-radius: 2px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.2s, transform 0.2s;
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  .toast.visible { opacity: 1; transform: translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <span class="topbar-title">Panel Docente</span>
+    <div class="topbar-right">
+      <span class="sync-badge" id="syncBadge">Sin sincronizacion</span>
+      <span class="topbar-meta" id="clock"></span>
+    </div>
+  </header>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <h2>Alumnos</h2>
+      <span class="client-count" id="clientCount">0</span>
+    </div>
+    <div class="client-list" id="clientList">
+      <div class="empty-list">Sin alumnos conectados</div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- SINCRONIZACION -->
+    <div class="section">
+      <div class="section-title">Sincronizacion</div>
+      <div class="param-row">
+        <div class="field">
+          <label>L</label>
+          <input type="number" id="sL" value="5" min="1" max="10" step="0.1">
+        </div>
+        <div class="field">
+          <label>T</label>
+          <input type="number" id="sT" value="3" min="1" max="10" step="0.1">
+        </div>
+        <div class="field">
+          <label>c</label>
+          <input type="number" id="sC" value="1" min="0.1" max="2" step="0.1">
+        </div>
+        <div class="field">
+          <label>Inicial</label>
+          <select id="sInicial">
+            <option value="seno">Seno</option>
+            <option value="triangular">Triangular</option>
+            <option value="gauss">Gauss</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="activarSync()">Sincronizar</button>
+        <button class="btn btn-danger" id="btnUnsync" onclick="desactivarSync()" disabled>Liberar</button>
+      </div>
+    </div>
+
+    <!-- VISUALIZACION -->
+    <div class="viz-section">
+      <div class="section-title">Visualizacion</div>
+      <div class="param-row" style="grid-template-columns: repeat(4, 1fr) auto;">
+        <div class="field">
+          <label>L</label>
+          <input type="number" id="vL" value="5" min="1" max="10" step="0.1">
+        </div>
+        <div class="field">
+          <label>T</label>
+          <input type="number" id="vT" value="3" min="1" max="10" step="0.1">
+        </div>
+        <div class="field">
+          <label>c</label>
+          <input type="number" id="vC" value="1" min="0.1" max="2" step="0.1">
+        </div>
+        <div class="field">
+          <label>Inicial</label>
+          <select id="vInicial">
+            <option value="seno">Seno</option>
+            <option value="triangular">Triangular</option>
+            <option value="gauss">Gauss</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="calcular()">Calcular</button>
+      </div>
+
+      <div class="canvas-wrap">
+        <canvas id="waveCanvas"></canvas>
+        <div class="viz-placeholder" id="placeholder">Ingrese parametros y presione Calcular</div>
+      </div>
+
+      <div class="playbar">
+        <button class="btn-play" id="btnPlay" onclick="togglePlay()" disabled>Play</button>
+        <div class="progress-wrap" onclick="scrub(event)">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <span class="frame-label" id="frameLabel">—</span>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ── ESTADO ───────────────────────────────────────
+  let matrizU     = null;
+  let frameActual = 0;
+  let playing     = false;
+  let rafId       = null;
+  let lastTs      = 0;
+  const FPS       = 40;
+  const MS_PF     = 1000 / FPS;
+
+  // ── RELOJ ────────────────────────────────────────
+  function tickReloj() {
+    document.getElementById('clock').textContent =
+      new Date().toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  }
+  setInterval(tickReloj, 1000);
+  tickReloj();
+
+  // ── CLIENTES ─────────────────────────────────────
+  async function actualizarClientes() {
+    try {
+      const res  = await fetch('/admin/clients');
+      if (!res.ok) return;
+      const data = await res.json();
+      renderClientes(data.clientes || []);
+    } catch (_) {}
+  }
+
+  function renderClientes(clientes) {
+    document.getElementById('clientCount').textContent = clientes.length;
+    const list = document.getElementById('clientList');
+    if (!clientes.length) {
+      list.innerHTML = '<div class="empty-list">Sin alumnos conectados</div>';
+      return;
+    }
+    list.innerHTML = clientes.map(cl => `
+      <div class="client-item">
+        <div>
+          <div class="client-name">${h(cl.nombre)}</div>
+          <div class="client-meta">
+            <span>${h(cl.legajo)}</span>
+            <span>${h(cl.ip)}</span>
+            <span>${h(cl.ultimoRequest)}</span>
+          </div>
+        </div>
+        <div class="client-actions">
+          <span class="role-tag ${cl.rol === 'asistente' ? 'asistente' : ''}">${h(cl.rol)}</span>
+          <button class="btn-role btn-promote" onclick="promover('${h(cl.ip)}')">+ asistente</button>
+          <button class="btn-role btn-demote"  onclick="demover('${h(cl.ip)}')">- asistente</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  setInterval(actualizarClientes, 5000);
+  actualizarClientes();
+
+  // ── PROMOTE / DEMOTE ─────────────────────────────
+  async function promover(ip) {
+    const res = await fetch('/admin/promote', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ ip })
+    });
+    res.ok ? toast('Rol de asistente otorgado') : toast('No se pudo otorgar el rol', true);
+    actualizarClientes();
+  }
+
+  async function demover(ip) {
+    const res = await fetch('/admin/demote', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ ip })
+    });
+    res.ok ? toast('Rol revocado') : toast('No se pudo revocar el rol', true);
+    actualizarClientes();
+  }
+
+  // ── SYNC ─────────────────────────────────────────
+  async function activarSync() {
+    const body = {
+      L:       parseFloat(document.getElementById('sL').value),
+      T:       parseFloat(document.getElementById('sT').value),
+      c:       parseFloat(document.getElementById('sC').value),
+      inicial: document.getElementById('sInicial').value
+    };
+    const res = await fetch('/admin/sync/set', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    if (res.ok) {
+      document.getElementById('syncBadge').textContent = 'Sincronizando';
+      document.getElementById('syncBadge').classList.add('active');
+      document.getElementById('btnUnsync').disabled = false;
+      toast('Sincronizacion activada');
+    } else {
+      toast('Error al activar sincronizacion', true);
+    }
+  }
+
+  async function desactivarSync() {
+    const res = await fetch('/admin/sync/clear', { method: 'POST' });
+    if (res.ok) {
+      document.getElementById('syncBadge').textContent = 'Sin sincronizacion';
+      document.getElementById('syncBadge').classList.remove('active');
+      document.getElementById('btnUnsync').disabled = true;
+      toast('Alumnos liberados');
+    }
+  }
+
+  // ── CALCULAR ─────────────────────────────────────
+  async function calcular() {
+    const L       = parseFloat(document.getElementById('vL').value);
+    const T       = parseFloat(document.getElementById('vT').value);
+    const c       = parseFloat(document.getElementById('vC').value);
+    const inicial = document.getElementById('vInicial').value;
+
+    try {
+      const res  = await fetch(`/solve?L=${L}&T=${T}&c=${c}&inicial=${inicial}`);
+      if (!res.ok) { toast('Parametros invalidos', true); return; }
+      const data = await res.json();
+      matrizU     = data.result;
+      frameActual = 0;
+      document.getElementById('placeholder').style.display = 'none';
+      document.getElementById('btnPlay').disabled = false;
+      detener();
+      dibujarFrame(0);
+      toast('Listo — ' + matrizU.length + ' pasos temporales');
+    } catch (_) {
+      toast('Error de conexion', true);
+    }
+  }
+
+  // ── CANVAS ───────────────────────────────────────
+  function dibujarFrame(t) {
+    const canvas = document.getElementById('waveCanvas');
+    const wrap   = canvas.parentElement;
+    canvas.width  = wrap.clientWidth;
+    canvas.height = wrap.clientHeight;
+
+    const ctx = canvas.getContext('2d');
+    const W   = canvas.width;
+    const H   = canvas.height;
+    const px  = 40;
+    const py  = 32;
+
+    ctx.clearRect(0, 0, W, H);
+
+    // eje equilibrio
+    ctx.strokeStyle = '#ddd9ce';
+    ctx.lineWidth   = 1;
+    ctx.setLineDash([4, 6]);
+    ctx.beginPath();
+    ctx.moveTo(px, H / 2);
+    ctx.lineTo(W - px, H / 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // onda
+    const fila   = matrizU[t];
+    const n      = fila.length;
+    const ampMax = (H - py * 2) / 2;
+
+    // sombra bajo la curva
+    const grad = ctx.createLinearGradient(0, H / 2 - ampMax, 0, H / 2 + ampMax);
+    grad.addColorStop(0,   'rgba(138, 104, 48, 0.12)');
+    grad.addColorStop(0.5, 'rgba(138, 104, 48, 0.04)');
+    grad.addColorStop(1,   'rgba(138, 104, 48, 0.12)');
+
+    ctx.beginPath();
+    for (let j = 0; j < n; j++) {
+      const x = px + (j / (n - 1)) * (W - px * 2);
+      const y = H / 2 - fila[j] * ampMax;
+      j === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.lineTo(W - px, H / 2);
+    ctx.lineTo(px, H / 2);
+    ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // linea principal
+    ctx.beginPath();
+    ctx.strokeStyle = '#8a6830';
+    ctx.lineWidth   = 2;
+    ctx.lineJoin    = 'round';
+    for (let j = 0; j < n; j++) {
+      const x = px + (j / (n - 1)) * (W - px * 2);
+      const y = H / 2 - fila[j] * ampMax;
+      j === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // etiquetas
+    ctx.fillStyle = '#b8b0a0';
+    ctx.font      = '10px DM Mono, monospace';
+    ctx.fillText('0', px - 6, H / 2 + 14);
+    ctx.fillText('L', W - px + 4, H / 2 + 14);
+    ctx.fillText('u', px - 6, py - 6);
+
+    // barra de progreso y label
+    frameActual = t;
+    const pct   = matrizU.length > 1 ? (t / (matrizU.length - 1)) * 100 : 0;
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('frameLabel').textContent   =
+      't = ' + t + ' / ' + (matrizU.length - 1);
+  }
+
+  // ── ANIMACION ────────────────────────────────────
+  function animar(ts) {
+    if (!playing) return;
+    if (ts - lastTs >= MS_PF) {
+      lastTs = ts;
+      frameActual = (frameActual + 1) % matrizU.length;
+      dibujarFrame(frameActual);
+    }
+    rafId = requestAnimationFrame(animar);
+  }
+
+  function togglePlay() {
+    if (!matrizU) return;
+    playing ? detener() : iniciar();
+  }
+
+  function iniciar() {
+    playing = true;
+    document.getElementById('btnPlay').textContent = 'Pausa';
+    rafId = requestAnimationFrame(animar);
+  }
+
+  function detener() {
+    playing = false;
+    document.getElementById('btnPlay').textContent = 'Play';
+    if (rafId) cancelAnimationFrame(rafId);
+  }
+
+  function scrub(e) {
+    if (!matrizU) return;
+    const wrap = e.currentTarget;
+    const rect = wrap.getBoundingClientRect();
+    const pct  = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const t    = Math.round(pct * (matrizU.length - 1));
+    detener();
+    dibujarFrame(t);
+  }
+
+  window.addEventListener('resize', () => { if (matrizU) dibujarFrame(frameActual); });
+
+  // ── HELPERS ──────────────────────────────────────
+  function h(s) {
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  let toastTimer;
+  function toast(msg, err = false) {
+    const el = document.getElementById('toast');
+    el.textContent  = msg;
+    el.style.color  = err ? '#a04a28' : '#3a6e3a';
+    el.style.borderColor = err ? '#d4a8a0' : '#b8d4b8';
+    el.classList.add('visible');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('visible'), 2800);
+  }
+</script>
+
+</body>
+</html>

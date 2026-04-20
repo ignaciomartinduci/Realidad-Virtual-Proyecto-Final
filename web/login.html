@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel Docente</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=DM+Mono:wght@300;400&display=swap');
+
+  :root {
+    --bg:      #ffffff;
+    --surface: #f5f3ee;
+    --border:  #d4cdb8;
+    --text:    #16150f;
+    --muted:   #8a8270;
+    --accent:  #8a6830;
+    --error:   #a04a28;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'EB Garamond', Georgia, serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── LOGIN ─────────────────────────────────────────── */
+  #login {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+
+
+  .login-header {
+    text-align: center;
+    margin-bottom: 52px;
+    animation: rise 0.7s ease both;
+  }
+
+  .login-header h1 {
+    font-size: 2rem;
+    font-weight: 400;
+    letter-spacing: 0.01em;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+
+  .login-header p {
+    font-size: 0.95rem;
+    color: var(--muted);
+    font-style: italic;
+  }
+
+  .login-form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    animation: rise 0.7s 0.1s ease both;
+  }
+
+  .code-label {
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    align-self: flex-start;
+    margin-bottom: -12px;
+  }
+
+  .code-input {
+    width: 240px;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    padding: 10px 0;
+    font-family: 'DM Mono', monospace;
+    font-size: 1.3rem;
+    letter-spacing: 0.25em;
+    color: var(--accent);
+    text-align: center;
+    outline: none;
+    transition: border-color 0.2s;
+    caret-color: var(--accent);
+  }
+
+  .code-input:focus {
+    border-bottom-color: var(--accent);
+  }
+
+  .code-input.error {
+    border-bottom-color: var(--error);
+    animation: shake 0.3s ease;
+  }
+
+  .error-msg {
+    font-size: 0.8rem;
+    color: var(--error);
+    font-style: italic;
+    height: 18px;
+    transition: opacity 0.2s;
+    opacity: 0;
+  }
+  .error-msg.visible { opacity: 1; }
+
+  .btn-enter {
+    margin-top: 8px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    padding: 10px 32px;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+  }
+
+  .btn-enter:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+
+  /* ── ANIMACIONES ────────────────────────────────────── */
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25%       { transform: translateX(-6px); }
+    75%       { transform: translateX(6px); }
+  }
+</style>
+</head>
+<body>
+
+<!-- PANTALLA DE LOGIN -->
+<div id="login">
+  <div class="login-header">
+    <h1>Panel Docente</h1>
+    <p>Ingrese el codigo de acceso para continuar</p>
+  </div>
+
+  <div class="login-form">
+    <span class="code-label">Codigo</span>
+    <input
+      id="codeInput"
+      class="code-input"
+      type="password"
+      maxlength="6"
+      autocomplete="off"
+      spellcheck="false"
+    >
+    <span id="errorMsg" class="error-msg">Codigo incorrecto</span>
+    <button class="btn-enter" onclick="verificar()">Ingresar</button>
+  </div>
+</div>
+
+
+<script>
+  const input    = document.getElementById("codeInput");
+  const errorMsg = document.getElementById("errorMsg");
+
+  // Confirmar con Enter
+  input.addEventListener("keydown", e => {
+    if (e.key === "Enter") verificar();
+    // Limpiar error al escribir
+    input.classList.remove("error");
+    errorMsg.classList.remove("visible");
+    errorMsg.textContent = "Codigo incorrecto";
+  });
+
+  async function verificar() {
+    const codigo = input.value;
+
+    try {
+      const res = await fetch("/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ codigo })
+      });
+
+      if (res.ok) {
+        // IP autorizada — redirigir al panel
+        window.location.href = "/panel";
+      } else {
+        // Codigo incorrecto — el servidor respondio 401
+        input.classList.add("error");
+        errorMsg.classList.add("visible");
+        input.value = "";
+      }
+
+    } catch (err) {
+      // Error de red: el servidor no esta disponible
+      errorMsg.textContent = "No se pudo conectar con el servidor";
+      errorMsg.classList.add("visible");
+    }
+  }
+</script>
+
+</body>
+</html>
