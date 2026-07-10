@@ -1,0 +1,32 @@
+\babel@toc {spanish}{}\relax 
+\contentsline {section}{\numberline {1}Introducción}{4}{section.1}%
+\contentsline {section}{\numberline {2}Objetivos y Beneficiarios}{5}{section.2}%
+\contentsline {subsection}{\numberline {2.1}Objetivo general}{5}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}Objetivos específicos}{5}{subsection.2.2}%
+\contentsline {subsection}{\numberline {2.3}Beneficiarios}{5}{subsection.2.3}%
+\contentsline {section}{\numberline {3}Resolución de Ecuaciones Diferenciales}{6}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Fundamentos del método de diferencias finitas}{6}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}Ecuación de onda 2D}{6}{subsection.3.2}%
+\contentsline {subsubsection}{\numberline {3.2.1}Formulación matemática}{6}{subsubsection.3.2.1}%
+\contentsline {subsubsection}{\numberline {3.2.2}Esquema leapfrog de segundo orden}{6}{subsubsection.3.2.2}%
+\contentsline {subsubsection}{\numberline {3.2.3}Condición de estabilidad CFL}{7}{subsubsection.3.2.3}%
+\contentsline {subsubsection}{\numberline {3.2.4}Condiciones iniciales implementadas}{7}{subsubsection.3.2.4}%
+\contentsline {subsubsection}{\numberline {3.2.5}Implementación en Go}{7}{subsubsection.3.2.5}%
+\contentsline {subsection}{\numberline {3.3}Ecuación de calor 2D}{8}{subsection.3.3}%
+\contentsline {subsubsection}{\numberline {3.3.1}Formulación matemática}{8}{subsubsection.3.3.1}%
+\contentsline {subsubsection}{\numberline {3.3.2}Esquema FTCS explícito}{9}{subsubsection.3.3.2}%
+\contentsline {subsubsection}{\numberline {3.3.3}Condición de estabilidad}{9}{subsubsection.3.3.3}%
+\contentsline {subsubsection}{\numberline {3.3.4}Condiciones iniciales y de contorno implementadas}{9}{subsubsection.3.3.4}%
+\contentsline {subsubsection}{\numberline {3.3.5}Implementación en Go}{10}{subsubsection.3.3.5}%
+\contentsline {subsection}{\numberline {3.4}Consideraciones de eficiencia}{11}{subsection.3.4}%
+\contentsline {section}{\numberline {4}Arquitectura del Servidor}{12}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Resumen de rutas}{12}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}\texttt {main.go} — Router y punto de entrada}{14}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}\texttt {auth.go} — Autenticación y limitación de tasa}{15}{subsection.4.3}%
+\contentsline {subsection}{\numberline {4.4}\texttt {sync.go} — Estado global en memoria}{17}{subsection.4.4}%
+\contentsline {subsection}{\numberline {4.5}\texttt {handlers.go} — Endpoints de la app móvil}{20}{subsection.4.5}%
+\contentsline {subsection}{\numberline {4.6}\texttt {admin.go} — Endpoints del panel docente}{23}{subsection.4.6}%
+\contentsline {section}{\numberline {5}Trabajo Futuro}{26}{section.5}%
+\contentsline {subsection}{\numberline {5.1}Escalabilidad de la plataforma}{26}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}Incorporación de nuevos solvers}{26}{subsection.5.2}%
+\contentsline {subsection}{\numberline {5.3}Mejoras en la experiencia de realidad virtual}{27}{subsection.5.3}%

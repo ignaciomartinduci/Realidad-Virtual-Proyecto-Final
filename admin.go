@@ -96,16 +96,21 @@ func syncSetAdminHandler(c *gin.Context) {
 		return
 	}
 
-	if req.L < 1 || req.L > 10 || req.T < 1 || req.T > 10 || req.C < 0.1 || req.C > 2 {
+	lMax := 10.0
+	if req.Ecuacion == "calor2d" {
+		lMax = 20.0
+	}
+	if req.L < 1 || req.L > lMax || req.T < 1 || req.T > 60 || req.C < 0.1 || req.C > 2 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Parámetros fuera de rango"})
 		return
 	}
 
 	estado.ActivarSync(parametrosSync{
-		L:       req.L,
-		T:       req.T,
-		C:       req.C,
-		Inicial: req.Inicial,
+		Ecuacion: req.Ecuacion,
+		L:        req.L,
+		T:        req.T,
+		C:        req.C,
+		Inicial:  req.Inicial,
 	})
 
 	c.JSON(http.StatusOK, gin.H{"ok": true})

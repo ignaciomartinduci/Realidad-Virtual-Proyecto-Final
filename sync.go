@@ -25,10 +25,11 @@ type Cliente struct {
 // parametrosSync contiene los parámetros de la ecuación que el asistente
 // fuerza a todos los alumnos cuando la sincronización está activa.
 type parametrosSync struct {
-	L       float64
-	T       float64
-	C       float64
-	Inicial string
+	Ecuacion string
+	L        float64
+	T        float64
+	C        float64
+	Inicial  string
 }
 
 // estadoGlobal centraliza todo el estado en memoria del servidor.
@@ -53,6 +54,8 @@ func (e *estadoGlobal) RegistrarCliente(ip, legajo, nombre string) {
 	defer e.mu.Unlock()
 
 	if c, existe := e.clientes[ip]; existe {
+		c.Legajo = legajo
+		c.Nombre = nombre
 		c.UltimoRequest = time.Now()
 		return
 	}

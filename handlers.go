@@ -35,20 +35,21 @@ func registerHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
-// solveHandler calcula la solución de la ecuación de onda.
+// solveHandler calcula la solución de la ecuación seleccionada.
 // Si hay sincronización activa, ignora los parámetros del alumno
 // y usa los del asistente. Devuelve la matriz solución junto con
 // el estado de sincronización para que la app pueda reaccionar.
 //
 // Parámetros esperados (query params):
-//   - L       : longitud del dominio [1, 10]
-//   - T       : tiempo total         [1, 10]
-//   - c       : velocidad de onda    [0.1, 2]
-//   - inicial : condición inicial    ("seno", "triangular", "gauss")
+//   - ecuacion : ecuación a resolver  ("onda2d", "calor")
+//   - L        : longitud del dominio [1, 10]
+//   - T        : tiempo total         [1, 10]
+//   - c        : velocidad de onda (onda2d) o difusividad (calor) [0.1, 2]
+//   - inicial  : condición inicial    ("seno", "triangular", "gauss")
 //
 // Responde:
-//   - 200 con { "sync": bool, "result": [[...], ...] }
-//   - 400 si los parámetros son inválidos o estan fuera de rango
+//   - 200 con { "sync": bool, "ecuacion": string, "result": ... }
+//   - 400 si los parámetros son inválidos o están fuera de rango
 func solveHandler(c *gin.Context) {
 
 	// Actualizar ultimo request del alumno si ya esta registrado.
@@ -58,7 +59,7 @@ func solveHandler(c *gin.Context) {
 	syncActivo, params := estado.EstadoSync()
 
 	var L, T, cw float64
-	var inicial string
+	var inicial, ecuacion string
 
 	if syncActivo {
 		// Usar los parametros forzados por el asistente.
@@ -66,12 +67,14 @@ func solveHandler(c *gin.Context) {
 		T = params.T
 		cw = params.C
 		inicial = params.Inicial
+		ecuacion = params.Ecuacion
 	} else {
 		// Leer y validar los parametros del alumno.
 		Ls, ok1 := c.GetQuery("L")
 		Ts, ok2 := c.GetQuery("T")
 		cs, ok3 := c.GetQuery("c")
 		inicial, _ = c.GetQuery("inicial")
+		ecuacion, _ = c.GetQuery("ecuacion")
 
 		if !ok1 || !ok2 || !ok3 {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Faltan parámetros en la consulta"})
@@ -88,27 +91,40 @@ func solveHandler(c *gin.Context) {
 			return
 		}
 
-		if L < 1 || L > 10 || T < 1 || T > 10 || cw < 0.1 || cw > 2 {
+		lMax := 10.0
+		if ecuacion == "calor2d" {
+			lMax = 20.0
+		}
+		if L < 1 || L > lMax || T < 1 || T > 60 || cw < 0.1 || cw > 2 {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Parámetros fuera de rango"})
 			return
 		}
 	}
 
-	result := ecuacion_onda(L, T, cw, inicial)
+	var result interface{}
+	switch ecuacion {
+	case "calor2d":
+		result = ecuacion_calor_2d(L, T, cw, inicial)
+	default: // "onda2d" y cualquier valor no reconocido
+		ecuacion = "onda2d"
+		result = ecuacion_onda_2d(L, T, cw, inicial)
+	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"sync":   syncActivo,
-		"result": result,
+		"sync":     syncActivo,
+		"ecuacion": ecuacion,
+		"result":   result,
 	})
 
 }
 
 // syncSetRequest representa el cuerpo JSON esperado en POST /sync/set.
 type syncSetRequest struct {
-	L       float64 `json:"L"`
-	T       float64 `json:"T"`
-	C       float64 `json:"c"`
-	Inicial string  `json:"inicial"`
+	Ecuacion string  `json:"ecuacion"`
+	L        float64 `json:"L"`
+	T        float64 `json:"T"`
+	C        float64 `json:"c"`
+	Inicial  string  `json:"inicial"`
 }
 
 // syncSetHandler activa la sincronizacion con los parametros enviados por el asistente.
@@ -131,17 +147,38 @@ func syncSetHandler(c *gin.Context) {
 		return
 	}
 
-	if req.L < 1 || req.L > 10 || req.T < 1 || req.T > 10 || req.C < 0.1 || req.C > 2 {
+	lMax := 10.0
+	if req.Ecuacion == "calor2d" {
+		lMax = 20.0
+	}
+	if req.L < 1 || req.L > lMax || req.T < 1 || req.T > 60 || req.C < 0.1 || req.C > 2 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Parámetros fuera de rango"})
 		return
 	}
 
 	estado.ActivarSync(parametrosSync{
-		L:       req.L,
-		T:       req.T,
-		C:       req.C,
-		Inicial: req.Inicial,
+		Ecuacion: req.Ecuacion,
+		L:        req.L,
+		T:        req.T,
+		C:        req.C,
+		Inicial:  req.Inicial,
 	})
 
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+// syncClearAsistenteHandler desactiva la sincronizacion desde la app movil.
+// Solo puede ser llamado por un cliente con rol de asistente.
+// Responde:
+//   - 200 si la sincronizacion se desactivo correctamente
+//   - 403 si el cliente no tiene rol de asistente
+func syncClearAsistenteHandler(c *gin.Context) {
+	cliente := estado.BuscarCliente(c.ClientIP())
+	if cliente == nil || cliente.Rol != rolAsistente {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Se requiere rol de asistente"})
+		return
+	}
+
+	estado.DesactivarSync()
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }

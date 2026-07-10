@@ -131,15 +131,9 @@
     gap: 6px 10px;
     align-items: start;
     transition: background 0.15s;
-    animation: slideIn 0.2s ease both;
   }
 
   .client-item:hover { background: var(--surface); }
-
-  @keyframes slideIn {
-    from { opacity: 0; transform: translateX(-6px); }
-    to   { opacity: 1; transform: translateX(0); }
-  }
 
   .client-name {
     font-size: 0.92rem;
@@ -218,6 +212,12 @@
     border-bottom: 1px solid var(--border);
     padding: 18px 28px;
     flex-shrink: 0;
+  }
+
+  /* Sincronización: borde izquierdo ámbar para distinguirla visualmente */
+  .section.sync-section {
+    border-left: 3px solid var(--accent);
+    padding-left: 25px;
   }
 
   .section-title {
@@ -302,7 +302,9 @@
     overflow: hidden;
     min-height: 0;
     margin-top: 12px;
+    cursor: grab;
   }
+  .canvas-wrap.dragging { cursor: grabbing; }
 
   canvas { display: block; width: 100%; height: 100%; }
 
@@ -316,6 +318,33 @@
     font-size: 0.85rem;
     color: var(--muted);
   }
+
+  /* Overlay de carga sobre el canvas */
+  .canvas-loading {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(247,245,240,0.82);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    z-index: 10;
+  }
+  .canvas-loading.visible { display: flex; }
+
+  .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    margin-right: 10px;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
   .playbar {
     margin-top: 10px;
@@ -344,11 +373,12 @@
 
   .progress-wrap {
     flex: 1;
-    height: 3px;
+    height: 8px;
     background: var(--border);
     border-radius: 2px;
     cursor: pointer;
     position: relative;
+    user-select: none;
   }
 
   .progress-fill {
@@ -357,13 +387,14 @@
     border-radius: 2px;
     width: 0%;
     pointer-events: none;
+    transition: width 0.05s linear;
   }
 
   .frame-label {
     font-family: 'DM Mono', monospace;
     font-size: 0.58rem;
     color: var(--muted);
-    min-width: 80px;
+    min-width: 96px;
     text-align: right;
   }
 
@@ -419,23 +450,30 @@
   <main class="main">
 
     <!-- SINCRONIZACION -->
-    <div class="section">
-      <div class="section-title">Sincronizacion</div>
-      <div class="param-row">
+    <div class="section sync-section">
+      <div class="section-title">Sincronizacion — fuerza estos parámetros a todos los alumnos</div>
+      <div class="param-row" style="grid-template-columns: repeat(5, 1fr) auto auto;">
         <div class="field">
-          <label>L</label>
-          <input type="number" id="sL" value="5" min="1" max="10" step="0.1">
+          <label title="Ecuación diferencial a resolver">Ecuación</label>
+          <select id="sEcuacion" onchange="actualizarLabelC('s')">
+            <option value="onda2d">Onda 2D</option>
+            <option value="calor2d">Calor 2D (placa)</option>
+          </select>
         </div>
         <div class="field">
-          <label>T</label>
-          <input type="number" id="sT" value="3" min="1" max="10" step="0.1">
+          <label title="Longitud del dominio cuadrado en metros">L (m)</label>
+          <input type="number" id="sL" value="5" min="1" max="10" step="0.1" title="Longitud del dominio [1–10 m]">
         </div>
         <div class="field">
-          <label>c</label>
-          <input type="number" id="sC" value="1" min="0.1" max="2" step="0.1">
+          <label title="Tiempo total de simulación en segundos">T (s)</label>
+          <input type="number" id="sT" value="3" min="1" max="60" step="0.1" title="Duración de la simulación [1–60 s]">
         </div>
         <div class="field">
-          <label>Inicial</label>
+          <label id="sLabelC" title="Velocidad de onda (onda2d) o difusividad térmica (calor2d)">c</label>
+          <input type="number" id="sC" value="1" min="0.1" max="2" step="0.1" title="Velocidad de onda c o difusividad α [0.1–2]">
+        </div>
+        <div class="field">
+          <label title="Distribución inicial de la variable">Inicial</label>
           <select id="sInicial">
             <option value="seno">Seno</option>
             <option value="triangular">Triangular</option>
@@ -449,39 +487,51 @@
 
     <!-- VISUALIZACION -->
     <div class="viz-section">
-      <div class="section-title">Visualizacion</div>
-      <div class="param-row" style="grid-template-columns: repeat(4, 1fr) auto;">
+      <div class="section-title">Visualizacion local</div>
+      <div class="param-row" style="grid-template-columns: repeat(5, 1fr) auto;">
         <div class="field">
-          <label>L</label>
-          <input type="number" id="vL" value="5" min="1" max="10" step="0.1">
+          <label title="Ecuación diferencial a resolver">Ecuación</label>
+          <select id="vEcuacion" onchange="actualizarLabelC('v')">
+            <option value="onda2d">Onda 2D</option>
+            <option value="calor2d">Calor 2D (placa)</option>
+          </select>
         </div>
         <div class="field">
-          <label>T</label>
-          <input type="number" id="vT" value="3" min="1" max="10" step="0.1">
+          <label title="Longitud del dominio cuadrado en metros">L (m)</label>
+          <input type="number" id="vL" value="5" min="1" max="10" step="0.1" title="Longitud del dominio [1–10 m]">
         </div>
         <div class="field">
-          <label>c</label>
-          <input type="number" id="vC" value="1" min="0.1" max="2" step="0.1">
+          <label title="Tiempo total de simulación en segundos">T (s)</label>
+          <input type="number" id="vT" value="3" min="1" max="60" step="0.1" title="Duración de la simulación [1–60 s]">
         </div>
         <div class="field">
-          <label>Inicial</label>
+          <label id="vLabelC" title="Velocidad de onda (onda2d) o difusividad térmica (calor2d)">c</label>
+          <input type="number" id="vC" value="1" min="0.1" max="2" step="0.1" title="Velocidad de onda c o difusividad α [0.1–2]">
+        </div>
+        <div class="field">
+          <label title="Distribución inicial de la variable">Inicial</label>
           <select id="vInicial">
             <option value="seno">Seno</option>
             <option value="triangular">Triangular</option>
             <option value="gauss">Gauss</option>
           </select>
         </div>
-        <button class="btn btn-primary" onclick="calcular()">Calcular</button>
+        <button class="btn btn-primary" id="btnCalcular" onclick="calcular()">Calcular</button>
       </div>
 
       <div class="canvas-wrap">
         <canvas id="waveCanvas"></canvas>
         <div class="viz-placeholder" id="placeholder">Ingrese parametros y presione Calcular</div>
+        <div class="canvas-loading" id="canvasLoading">
+          <div class="spinner"></div>
+          Calculando…
+        </div>
       </div>
 
       <div class="playbar">
         <button class="btn-play" id="btnPlay" onclick="togglePlay()" disabled>Play</button>
-        <div class="progress-wrap" onclick="scrub(event)">
+        <button class="btn-play" id="btnReset" onclick="resetVista()" title="Restablecer ángulo de vista" disabled>↺</button>
+        <div class="progress-wrap" id="progressWrap">
           <div class="progress-fill" id="progressFill"></div>
         </div>
         <span class="frame-label" id="frameLabel">—</span>
@@ -495,13 +545,22 @@
 
 <script>
   // ── ESTADO ───────────────────────────────────────
-  let matrizU     = null;
-  let frameActual = 0;
-  let playing     = false;
-  let rafId       = null;
-  let lastTs      = 0;
-  const FPS       = 40;
-  const MS_PF     = 1000 / FPS;
+  let matrizU        = null;
+  let ecuacionActual = 'onda2d';
+  let frameActual    = 0;
+  let T_actual       = 3;
+  let playing        = false;
+  let rafId          = null;
+  let lastTs         = 0;
+  let MS_PF          = 1000 / 30;
+  let rotX           = -0.45;
+  let rotY           = 0.55;
+  let isDragging     = false;
+  let lastMX         = 0;
+  let lastMY         = 0;
+  let vizBloqueada   = false;
+  // Cache de índices para dibujarPlaca (evita recalcular cada frame)
+  let cachedNx = 0, cachedNy = 0, cachedII = null, cachedJJ = null;
 
   // ── RELOJ ────────────────────────────────────────
   function tickReloj() {
@@ -571,13 +630,42 @@
     actualizarClientes();
   }
 
+  // ── HELPERS LABEL ────────────────────────────────
+  const OPCIONES_INICIAL = {
+    onda2d:  [['seno','Seno'],['triangular','Triangular'],['gauss','Gauss']],
+    calor2d: [['gauss','Gaussiana'],['bordes','Bordes calientes']],
+  };
+
+  function actualizarLabelC(prefix) {
+    const ec  = document.getElementById(prefix + 'Ecuacion').value;
+    const lbl = document.getElementById(prefix + 'LabelC');
+    lbl.textContent = ec === 'calor2d' ? 'α' : 'c';
+    lbl.title = ec === 'calor2d'
+      ? 'Difusividad térmica α [0.1–2 m²/s]'
+      : 'Velocidad de onda c [0.1–2 m/s]';
+    const lMax = ec === 'calor2d' ? 20 : 10;
+    const lInput = document.getElementById(prefix + 'L');
+    lInput.max = lMax;
+    lInput.title = `Longitud del dominio [1–${lMax} m]`;
+    if (parseFloat(lInput.value) > lMax) lInput.value = lMax;
+    const sel = document.getElementById(prefix + 'Inicial');
+    const prev = sel.value;
+    sel.innerHTML = (OPCIONES_INICIAL[ec] || OPCIONES_INICIAL.onda2d)
+      .map(([v,t]) => `<option value="${v}"${v===prev?' selected':''}>${t}</option>`).join('');
+  }
+
+  // Inicializar labels al cargar
+  actualizarLabelC('s');
+  actualizarLabelC('v');
+
   // ── SYNC ─────────────────────────────────────────
   async function activarSync() {
     const body = {
-      L:       parseFloat(document.getElementById('sL').value),
-      T:       parseFloat(document.getElementById('sT').value),
-      c:       parseFloat(document.getElementById('sC').value),
-      inicial: document.getElementById('sInicial').value
+      ecuacion: document.getElementById('sEcuacion').value,
+      L:        parseFloat(document.getElementById('sL').value),
+      T:        parseFloat(document.getElementById('sT').value),
+      c:        parseFloat(document.getElementById('sC').value),
+      inicial:  document.getElementById('sInicial').value
     };
     const res = await fetch('/admin/sync/set', {
       method: 'POST',
@@ -588,9 +676,11 @@
       document.getElementById('syncBadge').textContent = 'Sincronizando';
       document.getElementById('syncBadge').classList.add('active');
       document.getElementById('btnUnsync').disabled = false;
-      toast('Sincronizacion activada');
+      bloquearViz(true);
+      await fetchYMostrar(body.ecuacion, body.L, body.T, body.c, body.inicial);
     } else {
-      toast('Error al activar sincronizacion', true);
+      const err = await res.json().catch(() => ({}));
+      toast('Error al activar sincronizacion' + (err.error ? ': ' + err.error : ''), true);
     }
   }
 
@@ -600,107 +690,475 @@
       document.getElementById('syncBadge').textContent = 'Sin sincronizacion';
       document.getElementById('syncBadge').classList.remove('active');
       document.getElementById('btnUnsync').disabled = true;
+      bloquearViz(false);
       toast('Alumnos liberados');
     }
   }
 
   // ── CALCULAR ─────────────────────────────────────
   async function calcular() {
-    const L       = parseFloat(document.getElementById('vL').value);
-    const T       = parseFloat(document.getElementById('vT').value);
-    const c       = parseFloat(document.getElementById('vC').value);
-    const inicial = document.getElementById('vInicial').value;
+    const ecuacion = document.getElementById('vEcuacion').value;
+    const L        = parseFloat(document.getElementById('vL').value);
+    const T        = parseFloat(document.getElementById('vT').value);
+    const c        = parseFloat(document.getElementById('vC').value);
+    const inicial  = document.getElementById('vInicial').value;
+    await fetchYMostrar(ecuacion, L, T, c, inicial);
+  }
+
+  async function fetchYMostrar(ecuacion, L, T, c, inicial) {
+    // Mostrar estado de carga
+    const loading = document.getElementById('canvasLoading');
+    const btn     = document.getElementById('btnCalcular');
+    loading.classList.add('visible');
+    btn.disabled = true;
+    detener();
 
     try {
-      const res  = await fetch(`/solve?L=${L}&T=${T}&c=${c}&inicial=${inicial}`);
-      if (!res.ok) { toast('Parametros invalidos', true); return; }
+      const res = await fetch(`/solve?ecuacion=${ecuacion}&L=${L}&T=${T}&c=${c}&inicial=${inicial}`);
+      if (res.status === 429) {
+        const err = await res.json().catch(() => ({}));
+        const seg = err.waitSeconds ? ` Esperá ${err.waitSeconds}s.` : '';
+        toast('Demasiadas solicitudes.' + seg, true);
+        return;
+      }
+      if (!res.ok) { toast('Parámetros inválidos', true); return; }
       const data = await res.json();
-      matrizU     = data.result;
-      frameActual = 0;
+      matrizU        = data.result;
+      ecuacionActual = data.ecuacion;
+      T_actual       = T;
+      MS_PF          = T * 1000 / matrizU.length;
+      frameActual    = 0;
+      // Invalidar cache de índices
+      cachedII = null; cachedJJ = null; cachedNx = 0; cachedNy = 0;
       document.getElementById('placeholder').style.display = 'none';
       document.getElementById('btnPlay').disabled = false;
-      detener();
+      document.getElementById('btnReset').disabled = false;
       dibujarFrame(0);
-      toast('Listo — ' + matrizU.length + ' pasos temporales');
+      toast('Mostrando: ' + ecuacion + '  L=' + L + '  T=' + T + 's');
     } catch (_) {
       toast('Error de conexion', true);
+    } finally {
+      loading.classList.remove('visible');
+      if (!vizBloqueada) btn.disabled = false;
     }
   }
 
-  // ── CANVAS ───────────────────────────────────────
+  function bloquearViz(bloquear) {
+    vizBloqueada = bloquear;
+    ['vEcuacion','vL','vT','vC','vInicial'].forEach(id => {
+      document.getElementById(id).disabled = bloquear;
+    });
+    document.getElementById('btnCalcular').disabled = bloquear;
+  }
+
+  // ── COLORMAP CALOR ───────────────────────────────
+  // Gamma 0.55 suaviza la transición entre valores bajos (gris) y el rango naranja/rojo,
+  // evitando el salto abrupto que se veía en bordes calientes.
+  const HEAT_STOPS = [
+    [0.00,  80,  80,  80], // gris       — 0°
+    [0.25, 255, 230,   0], // amarillo   — 25°
+    [0.55, 255, 140,   0], // naranja    — 50°
+    [1.00, 220,   0,   0], // rojo       — 100°
+  ];
+
+  function heatRGB(v) {
+    v = Math.max(0, Math.min(1, v));
+    v = Math.pow(v, 0.55); // gamma: suaviza transición
+    for (let i = 0; i < HEAT_STOPS.length - 1; i++) {
+      const [t0,r0,g0,b0] = HEAT_STOPS[i];
+      const [t1,r1,g1,b1] = HEAT_STOPS[i+1];
+      if (v <= t1) {
+        const f = (v - t0) / (t1 - t0);
+        return [Math.round(r0+f*(r1-r0)), Math.round(g0+f*(g1-g0)), Math.round(b0+f*(b1-b0))];
+      }
+    }
+    return [220, 0, 0];
+  }
+
+  function heatStr(v, shade) {
+    const [r,g,b] = heatRGB(v);
+    const s = 0.30 + shade * 0.70;
+    return `rgb(${Math.round(r*s)},${Math.round(g*s)},${Math.round(b*s)})`;
+  }
+
+  // ── 3D RENDERER ──────────────────────────────────
+  function rotP(wx, wy, wz) {
+    const cy = Math.cos(rotY), sy = Math.sin(rotY);
+    const rx = wx*cy + wz*sy, rz = -wx*sy + wz*cy;
+    const cx = Math.cos(rotX), sx = Math.sin(rotX);
+    return { x: rx, y: wy*cx - rz*sx, z: wy*sx + rz*cx };
+  }
+
+  function proj3(p, W, H, sc) {
+    const f = 4 / (4 + p.z + 3);
+    return { sx: W/2 + p.x*sc*f, sy: H/2 - p.y*sc*f, z: p.z };
+  }
+
+  function buildVerts(t) {
+    const grid = matrizU[t];
+    const Nx = grid.length, Ny = grid[0].length;
+    const si = Math.max(1, Math.ceil(Nx / 48));
+    const sj = Math.max(1, Math.ceil(Ny / 48));
+    const rows = [];
+    for (let i = 0; i < Nx; i += si) {
+      const row = [];
+      for (let j = 0; j < Ny; j += sj) {
+        row.push({ wx: i/(Nx-1)*2-1, wy: grid[i][j], wz: j/(Ny-1)*2-1 });
+      }
+      rows.push(row);
+    }
+    return rows;
+  }
+
+  function faceColor(v, shade) {
+    v = Math.max(-1, Math.min(1, v));
+    const s = 0.35 + shade * 0.65;
+    let r, g, b;
+    if (v >= 0) {
+      r = Math.round((0.22 + v*0.78)*255*s);
+      g = Math.round((1-v)*0.45*255*s);
+      b = Math.round((1-v)*0.31*255*s);
+    } else {
+      r = Math.round((1+v)*0.31*255*s);
+      g = Math.round((1+v)*0.45*255*s);
+      b = Math.round((0.22-v*0.78)*255*s);
+    }
+    return `rgb(${r},${g},${b})`;
+  }
+
   function dibujarFrame(t) {
+    if (ecuacionActual === 'calor2d') dibujarPlaca(t);
+    else                              dibujar3D(t);
+  }
+
+  // ── ONDA 2D: superficie de altura ────────────────
+  function dibujar3D(t) {
     const canvas = document.getElementById('waveCanvas');
     const wrap   = canvas.parentElement;
-    canvas.width  = wrap.clientWidth;
-    canvas.height = wrap.clientHeight;
-
+    if (canvas.width !== wrap.clientWidth || canvas.height !== wrap.clientHeight) {
+      canvas.width  = wrap.clientWidth;
+      canvas.height = wrap.clientHeight;
+    }
     const ctx = canvas.getContext('2d');
-    const W   = canvas.width;
-    const H   = canvas.height;
-    const px  = 40;
-    const py  = 32;
-
+    const W = canvas.width, H = canvas.height;
     ctx.clearRect(0, 0, W, H);
 
-    // eje equilibrio
-    ctx.strokeStyle = '#ddd9ce';
-    ctx.lineWidth   = 1;
-    ctx.setLineDash([4, 6]);
-    ctx.beginPath();
-    ctx.moveTo(px, H / 2);
-    ctx.lineTo(W - px, H / 2);
-    ctx.stroke();
-    ctx.setLineDash([]);
+    const sc = Math.min(W, H) * 0.36;
+    const verts = buildVerts(t);
+    const R = verts.length, C = verts[0] ? verts[0].length : 0;
+    if (R < 2 || C < 2) { actualizarProgreso(t); return; }
 
-    // onda
-    const fila   = matrizU[t];
-    const n      = fila.length;
-    const ampMax = (H - py * 2) / 2;
+    const pv = verts.map(row => row.map(v => {
+      const r = rotP(v.wx, v.wy, v.wz);
+      return { ...proj3(r, W, H, sc), wy: v.wy };
+    }));
 
-    // sombra bajo la curva
-    const grad = ctx.createLinearGradient(0, H / 2 - ampMax, 0, H / 2 + ampMax);
-    grad.addColorStop(0,   'rgba(138, 104, 48, 0.12)');
-    grad.addColorStop(0.5, 'rgba(138, 104, 48, 0.04)');
-    grad.addColorStop(1,   'rgba(138, 104, 48, 0.12)');
-
-    ctx.beginPath();
-    for (let j = 0; j < n; j++) {
-      const x = px + (j / (n - 1)) * (W - px * 2);
-      const y = H / 2 - fila[j] * ampMax;
-      j === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    const LV = { x: 0.3, y: 0.8, z: 0.5 };
+    const faces = [];
+    for (let i = 0; i < R-1; i++) {
+      for (let j = 0; j < C-1; j++) {
+        const a = verts[i][j], b = verts[i+1][j], c = verts[i+1][j+1], d = verts[i][j+1];
+        const pa = pv[i][j], pb = pv[i+1][j], pc = pv[i+1][j+1], pd = pv[i][j+1];
+        const depth = (pa.z + pb.z + pc.z + pd.z) / 4;
+        const v1 = { x: c.wx-a.wx, y: c.wy-a.wy, z: c.wz-a.wz };
+        const v2 = { x: d.wx-b.wx, y: d.wy-b.wy, z: d.wz-b.wz };
+        const nx = v1.y*v2.z-v1.z*v2.y, ny = v1.z*v2.x-v1.x*v2.z, nz = v1.x*v2.y-v1.y*v2.x;
+        const nl = Math.sqrt(nx*nx+ny*ny+nz*nz) || 1;
+        const rn = rotP(nx/nl, ny/nl, nz/nl);
+        const shade = Math.max(0, Math.abs(rn.x*LV.x + rn.y*LV.y + rn.z*LV.z));
+        faces.push({ depth, pa, pb, pc, pd, shade, avgV: (a.wy+b.wy+c.wy+d.wy)/4 });
+      }
     }
-    ctx.lineTo(W - px, H / 2);
-    ctx.lineTo(px, H / 2);
-    ctx.closePath();
-    ctx.fillStyle = grad;
-    ctx.fill();
-
-    // linea principal
-    ctx.beginPath();
-    ctx.strokeStyle = '#8a6830';
-    ctx.lineWidth   = 2;
-    ctx.lineJoin    = 'round';
-    for (let j = 0; j < n; j++) {
-      const x = px + (j / (n - 1)) * (W - px * 2);
-      const y = H / 2 - fila[j] * ampMax;
-      j === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    faces.sort((a, b) => b.depth - a.depth);
+    for (const f of faces) {
+      ctx.beginPath();
+      ctx.moveTo(f.pa.sx, f.pa.sy);
+      ctx.lineTo(f.pb.sx, f.pb.sy);
+      ctx.lineTo(f.pc.sx, f.pc.sy);
+      ctx.lineTo(f.pd.sx, f.pd.sy);
+      ctx.closePath();
+      ctx.fillStyle = faceColor(f.avgV, f.shade);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.06)';
+      ctx.lineWidth = 0.4;
+      ctx.stroke();
     }
-    ctx.stroke();
 
-    // etiquetas
-    ctx.fillStyle = '#b8b0a0';
-    ctx.font      = '10px DM Mono, monospace';
-    ctx.fillText('0', px - 6, H / 2 + 14);
-    ctx.fillText('L', W - px + 4, H / 2 + 14);
-    ctx.fillText('u', px - 6, py - 6);
-
-    // barra de progreso y label
-    frameActual = t;
-    const pct   = matrizU.length > 1 ? (t / (matrizU.length - 1)) * 100 : 0;
-    document.getElementById('progressFill').style.width = pct + '%';
-    document.getElementById('frameLabel').textContent   =
-      't = ' + t + ' / ' + (matrizU.length - 1);
+    dibujarLeyendaOnda(ctx, W, H);
+    actualizarProgreso(t);
   }
+
+  // Leyenda de amplitud para onda 2D
+  function dibujarLeyendaOnda(ctx, W, H) {
+    const bw = 14;
+    const bh = Math.min(140, H * 0.40);
+    const bx = W - 44;
+    const by = (H - bh) / 2;
+
+    // Gradiente rojo (positivo) → gris → azul (negativo)
+    const grad = ctx.createLinearGradient(0, by, 0, by + bh);
+    grad.addColorStop(0.00, 'rgb(200,40,20)');   // positivo máximo
+    grad.addColorStop(0.50, 'rgb(55,55,80)');    // cero
+    grad.addColorStop(1.00, 'rgb(20,40,200)');   // negativo máximo
+    ctx.fillStyle = grad;
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+    ctx.lineWidth = 0.8;
+    ctx.strokeRect(bx, by, bw, bh);
+
+    ctx.font = '9px DM Mono, monospace';
+    ctx.textAlign = 'right';
+    const ticks = [[0,'+1'],[0.5,'0'],[1,'−1']];
+    for (const [frac, label] of ticks) {
+      const y = by + frac * bh;
+      ctx.fillStyle = '#8a8270';
+      ctx.fillText(label, bx - 4, y + 3);
+      ctx.beginPath();
+      ctx.moveTo(bx, y); ctx.lineTo(bx - 3, y);
+      ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+    }
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#8a8270';
+    ctx.fillText('u', bx + bw / 2, by - 5);
+  }
+
+  // ── CALOR 2D: placa plana con color de temperatura ──
+  const PLATE_TH = 0.15;
+
+  // Precalcula los índices de subsampling para la grilla de calor.
+  // Solo se recalcula cuando cambia el tamaño de la grilla (nueva simulación).
+  function getIJ(Nx, Ny) {
+    if (cachedII && cachedNx === Nx && cachedNy === Ny) return { II: cachedII, JJ: cachedJJ };
+    const si = Math.max(1, Math.ceil(Nx / 48));
+    const sj = Math.max(1, Math.ceil(Ny / 48));
+    cachedII = []; for (let i = 0; i < Nx; i += si) cachedII.push(i);
+    cachedJJ = []; for (let j = 0; j < Ny; j += sj) cachedJJ.push(j);
+    cachedNx = Nx; cachedNy = Ny;
+    return { II: cachedII, JJ: cachedJJ };
+  }
+
+  function dibujarPlaca(t) {
+    const canvas = document.getElementById('waveCanvas');
+    const wrap   = canvas.parentElement;
+    if (canvas.width !== wrap.clientWidth || canvas.height !== wrap.clientHeight) {
+      canvas.width  = wrap.clientWidth;
+      canvas.height = wrap.clientHeight;
+    }
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+
+    const sc = Math.min(W, H) * 0.38;
+
+    const grid = matrizU[t];
+    const Nx = grid.length, Ny = grid[0].length;
+    const { II, JJ } = getIJ(Nx, Ny);
+    const ni = II.length, nj = JJ.length;
+
+    const gx  = ii => II[ii] / (Nx-1) * 2 - 1;
+    const gz  = jj => JJ[jj] / (Ny-1) * 2 - 1;
+    const gv  = (ii, jj) => grid[II[ii]][JJ[jj]];
+    const TH  = PLATE_TH;
+    const LV  = { x: 0.4, y: 0.8, z: 0.4 };
+
+    const PP = (wx, wy, wz) => { const r = rotP(wx, wy, wz); return proj3(r, W, H, sc); };
+
+    function shade4(ax,ay,az, bx,by,bz, cx,cy,cz, dx,dy,dz) {
+      const v1 = {x:cx-ax, y:cy-ay, z:cz-az}, v2 = {x:dx-bx, y:dy-by, z:dz-bz};
+      const nx=v1.y*v2.z-v1.z*v2.y, ny=v1.z*v2.x-v1.x*v2.z, nz=v1.x*v2.y-v1.y*v2.x;
+      const nl=Math.sqrt(nx*nx+ny*ny+nz*nz)||1;
+      const rn=rotP(nx/nl,ny/nl,nz/nl);
+      return Math.max(0, Math.abs(rn.x*LV.x+rn.y*LV.y+rn.z*LV.z));
+    }
+
+    function pushFace(faces, ax,ay,az, bx,by,bz, cx,cy,cz, dx,dy,dz, fillFn) {
+      const pa=PP(ax,ay,az), pb=PP(bx,by,bz), pc=PP(cx,cy,cz), pd=PP(dx,dy,dz);
+      const depth=(pa.z+pb.z+pc.z+pd.z)/4;
+      const sh=shade4(ax,ay,az, bx,by,bz, cx,cy,cz, dx,dy,dz);
+      faces.push({ depth, pa, pb, pc, pd, fill: fillFn(sh) });
+    }
+
+    const faces = [];
+
+    // Sombra proyectada (elipse debajo de la placa, en y=-TH-offset)
+    {
+      const shadowY = -TH - 0.05;
+      const corners = [[-1,shadowY,-1],[1,shadowY,-1],[1,shadowY,1],[-1,shadowY,1]];
+      const ps = corners.map(([x,y,z]) => PP(x, y, z));
+      const depth = ps.reduce((s,p) => s+p.z, 0) / 4 + 10; // siempre al fondo
+      faces.push({
+        depth,
+        pa: ps[0], pb: ps[1], pc: ps[2], pd: ps[3],
+        fill: 'rgba(0,0,0,0.10)'
+      });
+    }
+
+    // Cara superior — coloreada por temperatura
+    for (let ii = 0; ii < ni-1; ii++) {
+      for (let jj = 0; jj < nj-1; jj++) {
+        const avgV = (gv(ii,jj)+gv(ii+1,jj)+gv(ii+1,jj+1)+gv(ii,jj+1))/4;
+        pushFace(faces,
+          gx(ii),TH,gz(jj),  gx(ii+1),TH,gz(jj),  gx(ii+1),TH,gz(jj+1),  gx(ii),TH,gz(jj+1),
+          sh => heatStr(avgV, sh)
+        );
+      }
+    }
+
+    // Cara inferior — misma temperatura que la superior
+    for (let ii = 0; ii < ni-1; ii++) {
+      for (let jj = 0; jj < nj-1; jj++) {
+        const avgV = (gv(ii,jj)+gv(ii+1,jj)+gv(ii+1,jj+1)+gv(ii,jj+1))/4;
+        pushFace(faces,
+          gx(ii),-TH,gz(jj),  gx(ii+1),-TH,gz(jj),  gx(ii+1),-TH,gz(jj+1),  gx(ii),-TH,gz(jj+1),
+          sh => heatStr(avgV, sh)
+        );
+      }
+    }
+
+    // Cantos frontales y traseros — color del borde adyacente
+    for (let ii = 0; ii < ni-1; ii++) {
+      const x0=gx(ii), x1=gx(ii+1);
+      { const avgV=(gv(ii,0)+gv(ii+1,0))/2;
+        pushFace(faces, x0,TH,gz(0), x1,TH,gz(0), x1,-TH,gz(0), x0,-TH,gz(0), sh=>heatStr(avgV,sh)); }
+      { const avgV=(gv(ii,nj-1)+gv(ii+1,nj-1))/2;
+        pushFace(faces, x0,TH,gz(nj-1), x1,TH,gz(nj-1), x1,-TH,gz(nj-1), x0,-TH,gz(nj-1), sh=>heatStr(avgV,sh)); }
+    }
+
+    // Cantos laterales — color del borde adyacente
+    for (let jj = 0; jj < nj-1; jj++) {
+      const z0=gz(jj), z1=gz(jj+1);
+      { const avgV=(gv(0,jj)+gv(0,jj+1))/2;
+        pushFace(faces, gx(0),TH,z0, gx(0),TH,z1, gx(0),-TH,z1, gx(0),-TH,z0, sh=>heatStr(avgV,sh)); }
+      { const avgV=(gv(ni-1,jj)+gv(ni-1,jj+1))/2;
+        pushFace(faces, gx(ni-1),TH,z0, gx(ni-1),TH,z1, gx(ni-1),-TH,z1, gx(ni-1),-TH,z0, sh=>heatStr(avgV,sh)); }
+    }
+
+    faces.sort((a, b) => b.depth - a.depth);
+    for (const f of faces) {
+      ctx.beginPath();
+      ctx.moveTo(f.pa.sx, f.pa.sy);
+      ctx.lineTo(f.pb.sx, f.pb.sy);
+      ctx.lineTo(f.pc.sx, f.pc.sy);
+      ctx.lineTo(f.pd.sx, f.pd.sy);
+      ctx.closePath();
+      ctx.fillStyle = f.fill;
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.04)';
+      ctx.lineWidth = 0.3;
+      ctx.stroke();
+    }
+
+    dibujarLeyendaCalor(ctx, W, H);
+    actualizarProgreso(t);
+  }
+
+  function dibujarLeyendaCalor(ctx, W, H) {
+    const bw = 14;
+    const bh = Math.min(160, H * 0.45);
+    const bx = W - 44;
+    const by = (H - bh) / 2;
+
+    const grad = ctx.createLinearGradient(0, by + bh, 0, by);
+    grad.addColorStop(0.00, 'rgb(80,80,80)');
+    grad.addColorStop(0.25, 'rgb(255,230,0)');
+    grad.addColorStop(0.55, 'rgb(255,140,0)');
+    grad.addColorStop(1.00, 'rgb(220,0,0)');
+
+    ctx.fillStyle = grad;
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+    ctx.lineWidth = 0.8;
+    ctx.strokeRect(bx, by, bw, bh);
+
+    ctx.font = '9px DM Mono, monospace';
+    ctx.textAlign = 'right';
+    for (const [frac, label] of [[1,'100°'],[0.75,'75°'],[0.5,'50°'],[0.25,'25°'],[0,'0°']]) {
+      const y = by + bh - frac * bh;
+      ctx.fillStyle = '#8a8270';
+      ctx.fillText(label, bx - 4, y + 3);
+      ctx.beginPath();
+      ctx.moveTo(bx, y); ctx.lineTo(bx - 3, y);
+      ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+    }
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#8a8270';
+    ctx.font = '9px DM Mono, monospace';
+    ctx.fillText('°C', bx + bw / 2, by - 5);
+  }
+
+  function actualizarProgreso(t) {
+    frameActual = t;
+    const total = matrizU.length - 1;
+    const pct   = total > 0 ? (t / total) * 100 : 0;
+    const t_seg = total > 0 ? (t / total * T_actual).toFixed(1) : '0.0';
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('frameLabel').textContent = `t = ${t_seg}s / ${T_actual}s`;
+  }
+
+  function resetVista() {
+    rotX = -0.45; rotY = 0.55;
+    if (matrizU) dibujarFrame(frameActual);
+  }
+
+  // ── ÓRBITA (drag para rotar) ──────────────────
+  function initOrbitControls() {
+    const canvas = document.getElementById('waveCanvas');
+    const wrap   = canvas.parentElement;
+
+    canvas.addEventListener('mousedown', e => {
+      isDragging = true; lastMX = e.clientX; lastMY = e.clientY;
+      wrap.classList.add('dragging');
+    });
+    window.addEventListener('mouseup', () => { isDragging = false; wrap.classList.remove('dragging'); });
+    window.addEventListener('mousemove', e => {
+      if (!isDragging) return;
+      rotY += (e.clientX - lastMX) * 0.008;
+      rotX += (e.clientY - lastMY) * 0.008;
+      rotX = Math.max(-Math.PI/2+0.05, Math.min(Math.PI/2-0.05, rotX));
+      lastMX = e.clientX; lastMY = e.clientY;
+      if (matrizU) dibujarFrame(frameActual);
+    });
+
+    canvas.addEventListener('touchstart', e => {
+      isDragging = true; lastMX = e.touches[0].clientX; lastMY = e.touches[0].clientY;
+      e.preventDefault();
+    }, { passive: false });
+    window.addEventListener('touchend', () => isDragging = false);
+    window.addEventListener('touchmove', e => {
+      if (!isDragging || !e.touches[0]) return;
+      rotY += (e.touches[0].clientX - lastMX) * 0.008;
+      rotX += (e.touches[0].clientY - lastMY) * 0.008;
+      rotX = Math.max(-Math.PI/2+0.05, Math.min(Math.PI/2-0.05, rotX));
+      lastMX = e.touches[0].clientX; lastMY = e.touches[0].clientY;
+      if (matrizU) dibujarFrame(frameActual);
+      e.preventDefault();
+    }, { passive: false });
+  }
+
+  // ── SCRUB (click + drag en barra de progreso) ──
+  let scrubbingActive = false;
+
+  function scrubAt(e) {
+    if (!matrizU) return;
+    const wrap = document.getElementById('progressWrap');
+    const rect  = wrap.getBoundingClientRect();
+    const pct   = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const t     = Math.round(pct * (matrizU.length - 1));
+    detener();
+    dibujarFrame(t);
+  }
+
+  document.getElementById('progressWrap').addEventListener('mousedown', e => {
+    scrubbingActive = true;
+    scrubAt(e);
+  });
+  window.addEventListener('mousemove', e => { if (scrubbingActive) scrubAt(e); });
+  window.addEventListener('mouseup',   () => { scrubbingActive = false; });
 
   // ── ANIMACION ────────────────────────────────────
   function animar(ts) {
@@ -720,6 +1178,7 @@
 
   function iniciar() {
     playing = true;
+    lastTs  = 0;
     document.getElementById('btnPlay').textContent = 'Pausa';
     rafId = requestAnimationFrame(animar);
   }
@@ -730,17 +1189,9 @@
     if (rafId) cancelAnimationFrame(rafId);
   }
 
-  function scrub(e) {
-    if (!matrizU) return;
-    const wrap = e.currentTarget;
-    const rect = wrap.getBoundingClientRect();
-    const pct  = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    const t    = Math.round(pct * (matrizU.length - 1));
-    detener();
-    dibujarFrame(t);
-  }
-
   window.addEventListener('resize', () => { if (matrizU) dibujarFrame(frameActual); });
+
+  initOrbitControls();
 
   // ── HELPERS ──────────────────────────────────────
   function h(s) {

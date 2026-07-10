@@ -5,7 +5,7 @@ import (
 )
 
 // Código de acceso del profesor. Hardcodeado por decisión de diseño.
-const codigoProfesor = "LlXxBb"
+const codigoProfesor = "123"
 
 func main() {
 
@@ -35,6 +35,7 @@ func main() {
 	router.POST("/register", registerHandler)                 // registro de alumno
 	router.GET("/solve", RateLimitMiddleware(), solveHandler) // calculo — limitado a 1 req/5s por IP
 	router.POST("/sync/set", syncSetHandler)                  // asistente activa sincronizacion
+	router.POST("/sync/clear", syncClearAsistenteHandler)     // asistente desactiva sincronizacion
 
-	router.Run(":8080")
+	router.Run("10.83.158.17:8080")
 }
