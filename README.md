@@ -124,16 +124,3 @@ El funcionamiento completo, la arquitectura, los algoritmos numéricos, la comun
 cliente-servidor y el procedimiento de instalación se describen en
 [`Documentacion/Informe_Final.pdf`](Documentacion/Informe_Final.pdf).
 
-## Archivos grandes y GitHub
-
-Los videos y el APK están configurados para utilizar Git LFS. Antes de agregar los
-archivos al repositorio por primera vez, instalar Git LFS y ejecutar:
-
-```bash
-git lfs install
-git add .
-git commit -m "Carga inicial del proyecto"
-```
-
-Esta configuración es necesaria porque dos de los videos superan el límite de tamaño
-admitido por los archivos comunes de GitHub.
