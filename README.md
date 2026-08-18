@@ -1,4 +1,4 @@
-# Simulación interactiva de ecuaciones diferenciales en Unity
+# Plataforma Interactiva de Realidad Virtual para la Visualización de Soluciones de Ecuaciones Diferenciales Parciales con Cómputo Remoto vía HTTP
 
 Este proyecto fue desarrollado como una herramienta didáctica para la cátedra de
 Matemática Avanzada. Permite visualizar en un teléfono Android la evolución de la
