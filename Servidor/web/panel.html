@@ -1,0 +1,1481 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel Docente</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=DM+Mono:wght@300;400;500&display=swap');
+
+  :root {
+    --bg:       #ffffff;
+    --surface:  #f7f5f0;
+    --border:   #ddd9ce;
+    --text:     #16150f;
+    --muted:    #8a8270;
+    --accent:   #8a6830;
+    --accent-l: #f0e8d8;
+    --error:    #a04a28;
+    --ok:       #3a6e3a;
+    --ok-l:     #e8f0e8;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'EB Garamond', Georgia, serif;
+    -webkit-font-smoothing: antialiased;
+    font-size: 16px;
+  }
+
+  .shell {
+    height: 100vh;
+    display: grid;
+    grid-template-rows: 52px 1fr;
+    grid-template-columns: 340px 1fr;
+    grid-template-areas:
+      "topbar topbar"
+      "sidebar main";
+  }
+
+  /* TOPBAR */
+  .topbar {
+    grid-area: topbar;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 28px;
+  }
+
+  .topbar-title { font-size: 1rem; font-weight: 500; }
+
+  .topbar-right { display: flex; align-items: center; gap: 20px; }
+
+  .sync-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 2px;
+    background: var(--surface);
+    color: var(--muted);
+    border: 1px solid var(--border);
+    transition: background 0.3s, color 0.3s, border-color 0.3s;
+  }
+
+  .sync-badge.active {
+    background: var(--ok-l);
+    color: var(--ok);
+    border-color: #b8d4b8;
+  }
+
+  .topbar-meta {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.62rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    grid-area: sidebar;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .sidebar-header {
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+
+  .sidebar-header h2 {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.62rem;
+    font-weight: 400;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .client-count {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+  }
+
+  .client-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 6px 0;
+  }
+
+  .client-list::-webkit-scrollbar { width: 3px; }
+  .client-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .client-item {
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--surface);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px 10px;
+    align-items: start;
+    transition: background 0.15s;
+  }
+
+  .client-item:hover { background: var(--surface); }
+
+  .client-name {
+    font-size: 0.92rem;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .client-meta {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.58rem;
+    color: var(--muted);
+    margin-top: 3px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+
+  .empty-list {
+    padding: 40px 20px;
+    text-align: center;
+    font-style: italic;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+
+  /* MAIN */
+  .main {
+    grid-area: main;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .section {
+    border-bottom: 1px solid var(--border);
+    padding: 18px 28px;
+    flex-shrink: 0;
+  }
+
+  /* Sincronización: borde izquierdo ámbar para distinguirla visualmente */
+  .section.sync-section {
+    border-left: 3px solid var(--accent);
+    padding-left: 25px;
+  }
+
+  .section-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  /* SYNC */
+  .param-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr) auto auto;
+    gap: 10px;
+    align-items: end;
+  }
+
+  .field { display: flex; flex-direction: column; gap: 4px; }
+
+  .field label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.58rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .field input, .field select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 6px 10px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.76rem;
+    color: var(--text);
+    outline: none;
+    border-radius: 2px;
+    transition: border-color 0.15s;
+    width: 100%;
+  }
+
+  .field input:focus, .field select:focus { border-color: var(--accent); }
+
+  .btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 7px 14px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.15s;
+    white-space: nowrap;
+    align-self: end;
+  }
+
+  .btn-primary { background: var(--text); border-color: var(--text); color: var(--bg); }
+  .btn-primary:hover { background: var(--accent); border-color: var(--accent); }
+  .btn-danger  { border-color: var(--error); color: var(--error); }
+  .btn-danger:hover { background: #f8ede8; }
+  .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  /* VISUALIZACION */
+  .viz-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 18px 28px 20px;
+  }
+
+  .canvas-wrap {
+    flex: 1;
+    position: relative;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    background: var(--surface);
+    overflow: hidden;
+    min-height: 0;
+    margin-top: 12px;
+    cursor: grab;
+  }
+  .canvas-wrap.dragging { cursor: grabbing; }
+
+  canvas { display: block; width: 100%; height: 100%; }
+
+  .viz-placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-style: italic;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+
+  /* Overlay de carga sobre el canvas */
+  .canvas-loading {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(247,245,240,0.82);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    z-index: 10;
+  }
+  .canvas-loading.visible { display: flex; }
+
+  .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    margin-right: 10px;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .playbar {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .btn-play {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 5px 12px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.15s;
+    min-width: 56px;
+  }
+
+  .btn-play:hover  { border-color: var(--accent); color: var(--accent); }
+  .btn-play:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  .progress-wrap {
+    flex: 1;
+    height: 8px;
+    background: var(--border);
+    border-radius: 2px;
+    cursor: pointer;
+    position: relative;
+    user-select: none;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    width: 0%;
+    pointer-events: none;
+    transition: width 0.05s linear;
+  }
+
+  .frame-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.58rem;
+    color: var(--muted);
+    min-width: 96px;
+    text-align: right;
+  }
+
+  /* AMORTIGUAMIENTO */
+  .damp-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: 10px;
+    min-height: 28px;
+  }
+
+  .damp-row.hidden { display: none; }
+
+  .toggle-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .toggle-wrap input[type="checkbox"] { display: none; }
+
+  .toggle-track {
+    width: 28px;
+    height: 14px;
+    background: var(--border);
+    border-radius: 7px;
+    position: relative;
+    transition: background 0.2s;
+    flex-shrink: 0;
+  }
+
+  .toggle-track::after {
+    content: '';
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background: white;
+    border-radius: 50%;
+    top: 2px;
+    left: 2px;
+    transition: left 0.2s;
+  }
+
+  .toggle-wrap input:checked + .toggle-track {
+    background: var(--accent);
+  }
+
+  .toggle-wrap input:checked + .toggle-track::after {
+    left: 16px;
+  }
+
+  .gamma-field {
+    display: none;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .gamma-field.visible { display: flex; }
+
+  .gamma-field label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.58rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .gamma-field input {
+    width: 72px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 4px 8px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.76rem;
+    color: var(--text);
+    outline: none;
+    border-radius: 2px;
+  }
+
+  .gamma-field input:focus { border-color: var(--accent); }
+
+  .frec-nat-display {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.58rem;
+    color: var(--accent);
+    white-space: nowrap;
+    margin-left: 6px;
+  }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 22px;
+    right: 22px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    padding: 9px 14px;
+    border-radius: 2px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.2s, transform 0.2s;
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  .toast.visible { opacity: 1; transform: translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <span class="topbar-title">Panel Docente</span>
+    <div class="topbar-right">
+      <span class="sync-badge" id="syncBadge">Sin sincronizacion</span>
+      <span class="topbar-meta" id="clock"></span>
+    </div>
+  </header>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <h2>Alumnos</h2>
+      <span class="client-count" id="clientCount">0</span>
+    </div>
+    <div class="client-list" id="clientList">
+      <div class="empty-list">Sin alumnos conectados</div>
+    </div>
+    <div style="padding:10px 14px;border-top:1px solid var(--border);">
+      <button id="btnExportXls" onclick="exportarExcel()" style="width:100%;padding:7px 0;background:var(--accent);color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;letter-spacing:0.03em;display:flex;align-items:center;justify-content:center;gap:6px;" title="Descargar planilla Excel con todos los alumnos conectados">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Exportar planilla
+      </button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- SINCRONIZACION -->
+    <div class="section sync-section">
+      <div class="section-title">Sincronizacion — fuerza estos parámetros a todos los alumnos</div>
+      <div class="param-row" style="grid-template-columns: repeat(5, 1fr) auto auto;">
+        <div class="field">
+          <label title="Ecuación diferencial a resolver">Ecuación</label>
+          <select id="sEcuacion" onchange="actualizarLabelC('s')">
+            <option value="onda2d">Onda 2D</option>
+            <option value="calor2d">Calor 2D (placa)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label title="Longitud del dominio cuadrado en metros">L (m)</label>
+          <input type="number" id="sL" value="5" min="1" max="10" step="0.1" title="Longitud del dominio [1–10 m]" oninput="actualizarFrecNat('s')">
+        </div>
+        <div class="field">
+          <label title="Tiempo total de simulación en segundos">T (s)</label>
+          <input type="number" id="sT" value="3" min="1" max="100" step="0.1" title="Duración de la simulación [1–100 s]">
+        </div>
+        <div class="field">
+          <label id="sLabelC" title="Velocidad de onda (onda2d) o difusividad térmica (calor2d)">c</label>
+          <input type="number" id="sC" value="1" min="0.1" max="2" step="0.1" title="Velocidad de onda c o difusividad α [0.1–2]" oninput="actualizarFrecNat('s')">
+        </div>
+        <div class="field">
+          <label title="Distribución inicial de la variable">Inicial</label>
+          <select id="sInicial">
+            <option value="seno">Seno</option>
+            <option value="triangular">Triangular</option>
+            <option value="gauss">Gauss</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="activarSync()">Sincronizar</button>
+        <button class="btn btn-danger" id="btnUnsync" onclick="desactivarSync()" disabled>Liberar</button>
+      </div>
+      <div class="damp-row hidden" id="sDampRow">
+        <label class="toggle-wrap" title="Activar amortiguamiento viscoso">
+          <input type="checkbox" id="sDamp" onchange="toggleDamp('s')">
+          <span class="toggle-track"></span>
+          Amortiguamiento
+        </label>
+        <div class="gamma-field" id="sGammaField">
+          <label for="sGamma">γ [0–1]</label>
+          <input type="number" id="sGamma" value="0.5" min="0" max="1" step="0.05" title="Coeficiente de amortiguamiento γ">
+        </div>
+      </div>
+      <div class="damp-row hidden" id="sExcRow">
+        <label class="toggle-wrap" title="Activar excitación forzada">
+          <input type="checkbox" id="sExc" onchange="toggleExc('s')">
+          <span class="toggle-track"></span>
+          Excitación
+        </label>
+        <div class="gamma-field" id="sExcFields">
+          <label for="sFormaExc">Forma</label>
+          <select id="sFormaExc" style="background:var(--surface);border:1px solid var(--border);padding:4px 8px;font-family:'DM Mono',monospace;font-size:0.76rem;color:var(--text);border-radius:2px;outline:none;">
+            <option value="seno">Seno</option>
+          </select>
+          <label for="sMultFrecExc" style="margin-left:8px;" title="Múltiplo de la frecuencia natural del modo fundamental f₀ = c·√2/(2L)">múltiplo de f₀</label>
+          <input type="number" id="sMultFrecExc" value="1" min="0.1" max="10" step="0.1" title="1 = resonancia exacta con el modo fundamental" oninput="actualizarFrecNat('s')">
+          <span id="sFrecNatDisplay" class="frec-nat-display"></span>
+        </div>
+      </div>
+      <div class="damp-row hidden" id="sModoRow">
+        <span style="font-size:0.82rem;color:var(--muted);font-weight:500;">Modo (a, b)</span>
+        <div class="gamma-field visible" style="display:flex;align-items:center;gap:10px;">
+          <label for="sModoA" title="Número de semiondas en dirección x">a</label>
+          <input type="number" id="sModoA" value="1" min="1" max="5" step="1" style="width:60px;" oninput="actualizarFrecNat('s')">
+          <label for="sModoB" title="Número de semiondas en dirección y">b</label>
+          <input type="number" id="sModoB" value="1" min="1" max="5" step="1" style="width:60px;" oninput="actualizarFrecNat('s')">
+          <span style="font-size:0.76rem;color:var(--muted);">sin(a·π·x/L)·sin(b·π·y/L)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- VISUALIZACION -->
+    <div class="viz-section">
+      <div class="section-title">Visualizacion local</div>
+      <div class="param-row" style="grid-template-columns: repeat(5, 1fr) auto;">
+        <div class="field">
+          <label title="Ecuación diferencial a resolver">Ecuación</label>
+          <select id="vEcuacion" onchange="actualizarLabelC('v')">
+            <option value="onda2d">Onda 2D</option>
+            <option value="calor2d">Calor 2D (placa)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label title="Longitud del dominio cuadrado en metros">L (m)</label>
+          <input type="number" id="vL" value="5" min="1" max="10" step="0.1" title="Longitud del dominio [1–10 m]" oninput="actualizarFrecNat('v')">
+        </div>
+        <div class="field">
+          <label title="Tiempo total de simulación en segundos">T (s)</label>
+          <input type="number" id="vT" value="3" min="1" max="100" step="0.1" title="Duración de la simulación [1–100 s]">
+        </div>
+        <div class="field">
+          <label id="vLabelC" title="Velocidad de onda (onda2d) o difusividad térmica (calor2d)">c</label>
+          <input type="number" id="vC" value="1" min="0.1" max="2" step="0.1" title="Velocidad de onda c o difusividad α [0.1–2]" oninput="actualizarFrecNat('v')">
+        </div>
+        <div class="field">
+          <label title="Distribución inicial de la variable">Inicial</label>
+          <select id="vInicial">
+            <option value="seno">Seno</option>
+            <option value="triangular">Triangular</option>
+            <option value="gauss">Gauss</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" id="btnCalcular" onclick="calcular()">Calcular</button>
+      </div>
+      <div class="damp-row hidden" id="vDampRow">
+        <label class="toggle-wrap" title="Activar amortiguamiento viscoso">
+          <input type="checkbox" id="vDamp" onchange="toggleDamp('v')">
+          <span class="toggle-track"></span>
+          Amortiguamiento
+        </label>
+        <div class="gamma-field" id="vGammaField">
+          <label for="vGamma">γ [0–1]</label>
+          <input type="number" id="vGamma" value="0.5" min="0" max="1" step="0.05" title="Coeficiente de amortiguamiento γ">
+        </div>
+      </div>
+      <div class="damp-row hidden" id="vExcRow">
+        <label class="toggle-wrap" title="Activar excitación forzada">
+          <input type="checkbox" id="vExc" onchange="toggleExc('v')">
+          <span class="toggle-track"></span>
+          Excitación
+        </label>
+        <div class="gamma-field" id="vExcFields">
+          <label for="vFormaExc">Forma</label>
+          <select id="vFormaExc" style="background:var(--surface);border:1px solid var(--border);padding:4px 8px;font-family:'DM Mono',monospace;font-size:0.76rem;color:var(--text);border-radius:2px;outline:none;">
+            <option value="seno">Seno</option>
+          </select>
+          <label for="vMultFrecExc" style="margin-left:8px;" title="Múltiplo de la frecuencia natural del modo fundamental f₀ = c·√2/(2L)">múltiplo de f₀</label>
+          <input type="number" id="vMultFrecExc" value="1" min="0.1" max="10" step="0.1" title="1 = resonancia exacta con el modo fundamental" oninput="actualizarFrecNat('v')">
+          <span id="vFrecNatDisplay" class="frec-nat-display"></span>
+        </div>
+      </div>
+
+      <div class="damp-row hidden" id="vModoRow">
+        <span style="font-size:0.82rem;color:var(--muted);font-weight:500;">Modo (a, b)</span>
+        <div class="gamma-field visible" style="display:flex;align-items:center;gap:10px;">
+          <label for="vModoA" title="Número de semiondas en dirección x">a</label>
+          <input type="number" id="vModoA" value="1" min="1" max="5" step="1" style="width:60px;" oninput="actualizarFrecNat('v')">
+          <label for="vModoB" title="Número de semiondas en dirección y">b</label>
+          <input type="number" id="vModoB" value="1" min="1" max="5" step="1" style="width:60px;" oninput="actualizarFrecNat('v')">
+          <span style="font-size:0.76rem;color:var(--muted);">sin(a·π·x/L)·sin(b·π·y/L)</span>
+        </div>
+      </div>
+
+      <div class="canvas-wrap">
+        <canvas id="waveCanvas"></canvas>
+        <div class="viz-placeholder" id="placeholder">Ingrese parametros y presione Calcular</div>
+        <div class="canvas-loading" id="canvasLoading">
+          <div class="spinner"></div>
+          Calculando…
+        </div>
+      </div>
+
+      <div class="playbar">
+        <button class="btn-play" id="btnPlay" onclick="togglePlay()" disabled>Play</button>
+        <button class="btn-play" id="btnReset" onclick="resetVista()" title="Restablecer ángulo de vista" disabled>↺</button>
+        <div class="progress-wrap" id="progressWrap">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <span class="frame-label" id="frameLabel">—</span>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ── ESTADO ───────────────────────────────────────
+  let matrizU        = null;
+  let ecuacionActual = 'onda2d';
+  let frameActual    = 0;
+  let T_actual       = 3;
+  let playing        = false;
+  let rafId          = null;
+  let lastTs         = 0;
+  let MS_PF          = 1000 / 30;
+  let rotX           = -0.45;
+  let rotY           = 0.55;
+  let isDragging     = false;
+  let lastMX         = 0;
+  let lastMY         = 0;
+  let vizBloqueada   = false;
+  // Cache de índices para dibujarPlaca (evita recalcular cada frame)
+  let cachedNx = 0, cachedNy = 0, cachedII = null, cachedJJ = null;
+
+  // ── RELOJ ────────────────────────────────────────
+  function tickReloj() {
+    document.getElementById('clock').textContent =
+      new Date().toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  }
+  setInterval(tickReloj, 1000);
+  tickReloj();
+
+  // ── CLIENTES ─────────────────────────────────────
+  let _lastClientes = [];
+
+  async function actualizarClientes() {
+    try {
+      const res  = await fetch('/admin/clients');
+      if (!res.ok) return;
+      const data = await res.json();
+      renderClientes(data.clientes || []);
+    } catch (_) {}
+  }
+
+  function renderClientes(clientes) {
+    _lastClientes = clientes || [];
+    document.getElementById('clientCount').textContent = clientes.length;
+    const list = document.getElementById('clientList');
+    if (!clientes.length) {
+      list.innerHTML = '<div class="empty-list">Sin alumnos conectados</div>';
+      return;
+    }
+    list.innerHTML = clientes.map(cl => `
+      <div class="client-item">
+        <div>
+          <div class="client-name">${h(cl.nombre)}</div>
+          <div class="client-meta">
+            <span>${h(cl.legajo)}</span>
+            <span>${h(cl.ip)}</span>
+            <span>${h(cl.ultimoRequest)}</span>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // ── EXPORTAR EXCEL ───────────────────────────────
+
+  function exportarExcel() {
+    const now = new Date();
+    const fechaStr = now.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const horaStr  = now.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const titulo   = `Planilla usuarios conectados a entorno de simulación [${fechaStr} ${horaStr}]`;
+
+    const filas = _lastClientes.map(cl => `
+      <tr>
+        <td>${esc(cl.nombre)}</td>
+        <td>${esc(cl.legajo)}</td>
+        <td>${esc(cl.ip)}</td>
+        <td>${esc(cl.ultimoRequest)}</td>
+      </tr>`).join('');
+
+    const html = `
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="UTF-8">
+<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet>
+<x:Name>Usuarios</x:Name>
+<x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>
+</x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
+<style>
+  body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; }
+  .titulo { font-size: 13pt; font-weight: bold; color: #1a3a5c; background: #dbe9f7; padding: 6px 10px; }
+  .subtitulo { font-size: 9pt; color: #555; padding: 2px 10px 10px; }
+  th { background: #1a3a5c; color: #fff; font-weight: bold; padding: 7px 12px; text-align: left; font-size: 10.5pt; border: 1px solid #15304e; }
+  td { padding: 6px 12px; font-size: 10.5pt; border: 1px solid #ccd6e0; vertical-align: middle; }
+  tr:nth-child(even) td { background: #eef4fb; }
+  tr:nth-child(odd)  td { background: #ffffff; }
+  tr:hover td { background: #d0e4f4; }
+  .total { font-size: 9.5pt; color: #444; padding: 8px 10px; }
+</style>
+</head>
+<body>
+<p class="titulo">${esc(titulo)}</p>
+<p class="subtitulo">Generado el ${fechaStr} a las ${horaStr} — Total: ${_lastClientes.length} usuario(s)</p>
+<table cellspacing="0">
+  <thead>
+    <tr>
+      <th>Nombre</th>
+      <th>Legajo</th>
+      <th>IP</th>
+      <th>Último acceso</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${filas || '<tr><td colspan="4" style="text-align:center;color:#888;">Sin usuarios conectados</td></tr>'}
+  </tbody>
+</table>
+<p class="total">Total de usuarios: ${_lastClientes.length}</p>
+</body></html>`;
+
+    const blob = new Blob(['﻿' + html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    const ts   = now.toISOString().slice(0, 19).replace(/[T:]/g, '-');
+    a.href     = url;
+    a.download = `usuarios-simulacion-${ts}.xls`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function esc(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  setInterval(actualizarClientes, 5000);
+  actualizarClientes();
+
+  // ── HELPERS LABEL ────────────────────────────────
+  const OPCIONES_INICIAL = {
+    onda2d:  [['seno','Seno'],['triangular','Triangular'],['gauss','Gauss'],['modo','Modo (a,b)']],
+    calor2d: [['gauss','Gaussiana'],['bordes','Bordes calientes']],
+  };
+
+  function actualizarLabelC(prefix) {
+    const ec  = document.getElementById(prefix + 'Ecuacion').value;
+    const lbl = document.getElementById(prefix + 'LabelC');
+    lbl.textContent = ec === 'calor2d' ? 'α' : 'c';
+    lbl.title = ec === 'calor2d'
+      ? 'Difusividad térmica α [0.1–2 m²/s]'
+      : 'Velocidad de onda c [0.1–2 m/s]';
+    const lMax = ec === 'calor2d' ? 20 : 10;
+    const lInput = document.getElementById(prefix + 'L');
+    lInput.max = lMax;
+    lInput.title = `Longitud del dominio [1–${lMax} m]`;
+    if (parseFloat(lInput.value) > lMax) lInput.value = lMax;
+    const sel = document.getElementById(prefix + 'Inicial');
+    const prev = sel.value;
+    sel.innerHTML = (OPCIONES_INICIAL[ec] || OPCIONES_INICIAL.onda2d)
+      .map(([v,t]) => `<option value="${v}"${v===prev?' selected':''}>${t}</option>`).join('');
+    // Mostrar amortiguamiento y excitación solo para onda
+    const dampRow = document.getElementById(prefix + 'DampRow');
+    const excRow  = document.getElementById(prefix + 'ExcRow');
+    if (ec === 'calor2d') {
+      dampRow.classList.add('hidden');
+      excRow.classList.add('hidden');
+      document.getElementById(prefix + 'Damp').checked = false;
+      document.getElementById(prefix + 'GammaField').classList.remove('visible');
+      document.getElementById(prefix + 'Exc').checked = false;
+      document.getElementById(prefix + 'ExcFields').classList.remove('visible');
+      document.getElementById(prefix + 'ModoRow').classList.add('hidden');
+    } else {
+      dampRow.classList.remove('hidden');
+      excRow.classList.remove('hidden');
+    }
+    toggleModo(prefix);
+    sel.onchange = () => toggleModo(prefix);
+  }
+
+  function toggleModo(prefix) {
+    const val = document.getElementById(prefix + 'Inicial').value;
+    const modoRow = document.getElementById(prefix + 'ModoRow');
+    val === 'modo' ? modoRow.classList.remove('hidden') : modoRow.classList.add('hidden');
+    actualizarFrecNat(prefix);
+  }
+
+  function toggleDamp(prefix) {
+    const checked = document.getElementById(prefix + 'Damp').checked;
+    const gammaField = document.getElementById(prefix + 'GammaField');
+    checked ? gammaField.classList.add('visible') : gammaField.classList.remove('visible');
+  }
+
+  function toggleExc(prefix) {
+    const checked = document.getElementById(prefix + 'Exc').checked;
+    const excFields = document.getElementById(prefix + 'ExcFields');
+    checked ? excFields.classList.add('visible') : excFields.classList.remove('visible');
+    if (checked) actualizarFrecNat(prefix);
+  }
+
+  function frecNat(prefix) {
+    const c = parseFloat(document.getElementById(prefix + 'C').value) || 1;
+    const L = parseFloat(document.getElementById(prefix + 'L').value) || 5;
+    const isMode = document.getElementById(prefix + 'Inicial').value === 'modo';
+    const a = isMode ? Math.max(1, Math.min(5, parseInt(document.getElementById(prefix + 'ModoA').value) || 1)) : 1;
+    const b = isMode ? Math.max(1, Math.min(5, parseInt(document.getElementById(prefix + 'ModoB').value) || 1)) : 1;
+    return c * Math.sqrt(a * a + b * b) / (2 * L);
+  }
+
+  function actualizarFrecNat(prefix) {
+    const f0   = frecNat(prefix);
+    const mult = parseFloat(document.getElementById(prefix + 'MultFrecExc').value) || 1;
+    const display = document.getElementById(prefix + 'FrecNatDisplay');
+    if (display) {
+      display.textContent = `f natural=${f0.toFixed(3)} Hz → ${(mult * f0).toFixed(3)} Hz`;
+    }
+  }
+
+  // Inicializar displays al cargar
+  actualizarFrecNat('s');
+  actualizarFrecNat('v');
+
+  // Inicializar labels al cargar
+  actualizarLabelC('s');
+  actualizarLabelC('v');
+
+  // ── SYNC ─────────────────────────────────────────
+  async function activarSync() {
+    const sDamp = document.getElementById('sDamp').checked;
+    const sExc  = document.getElementById('sExc').checked;
+    const sInicial = document.getElementById('sInicial').value;
+    const sModoA = Math.max(1, Math.min(5, parseInt(document.getElementById('sModoA').value) || 1));
+    const sModoB = Math.max(1, Math.min(5, parseInt(document.getElementById('sModoB').value) || 1));
+    const inicialFinal = sInicial === 'modo' ? `modo:${sModoA}:${sModoB}` : sInicial;
+    const body = {
+      ecuacion:        document.getElementById('sEcuacion').value,
+      L:               parseFloat(document.getElementById('sL').value),
+      T:               parseFloat(document.getElementById('sT').value),
+      c:               parseFloat(document.getElementById('sC').value),
+      inicial:         inicialFinal,
+      amortiguamiento: sDamp,
+      gamma:           sDamp ? parseFloat(document.getElementById('sGamma').value) : 0,
+      excitacion:      sExc,
+      formaExcitacion: sExc ? document.getElementById('sFormaExc').value : '',
+      frecExcitacion:  sExc ? parseFloat(document.getElementById('sMultFrecExc').value) * frecNat('s') : 0,
+    };
+    const res = await fetch('/admin/sync/set', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    if (res.ok) {
+      document.getElementById('syncBadge').textContent = 'Sincronizando';
+      document.getElementById('syncBadge').classList.add('active');
+      document.getElementById('btnUnsync').disabled = false;
+      bloquearViz(true);
+      await fetchYMostrar(body.ecuacion, body.L, body.T, body.c, sInicial, body.amortiguamiento, body.gamma, body.excitacion, body.formaExcitacion, body.frecExcitacion, sModoA, sModoB);
+    } else {
+      const err = await res.json().catch(() => ({}));
+      toast('Error al activar sincronizacion' + (err.error ? ': ' + err.error : ''), true);
+    }
+  }
+
+  async function desactivarSync() {
+    const res = await fetch('/admin/sync/clear', { method: 'POST' });
+    if (res.ok) {
+      document.getElementById('syncBadge').textContent = 'Sin sincronizacion';
+      document.getElementById('syncBadge').classList.remove('active');
+      document.getElementById('btnUnsync').disabled = true;
+      bloquearViz(false);
+      toast('Alumnos liberados');
+    }
+  }
+
+  // ── CALCULAR ─────────────────────────────────────
+  async function calcular() {
+    const ecuacion = document.getElementById('vEcuacion').value;
+    const L        = parseFloat(document.getElementById('vL').value);
+    const T        = parseFloat(document.getElementById('vT').value);
+    const c        = parseFloat(document.getElementById('vC').value);
+    const inicial  = document.getElementById('vInicial').value;
+    const damp     = document.getElementById('vDamp').checked;
+    const gamma    = damp ? parseFloat(document.getElementById('vGamma').value) : 0;
+    const exc      = document.getElementById('vExc').checked;
+    const formaExc = exc ? document.getElementById('vFormaExc').value : '';
+    const frecExc  = exc ? parseFloat(document.getElementById('vMultFrecExc').value) * frecNat('v') : 0;
+    const modoA    = Math.max(1, Math.min(5, parseInt(document.getElementById('vModoA').value) || 1));
+    const modoB    = Math.max(1, Math.min(5, parseInt(document.getElementById('vModoB').value) || 1));
+    await fetchYMostrar(ecuacion, L, T, c, inicial, damp, gamma, exc, formaExc, frecExc, modoA, modoB);
+  }
+
+  async function fetchYMostrar(ecuacion, L, T, c, inicial, damp = false, gamma = 0, exc = false, formaExc = '', frecExc = 0, modoA = 1, modoB = 1) {
+    // Mostrar estado de carga
+    const loading = document.getElementById('canvasLoading');
+    const btn     = document.getElementById('btnCalcular');
+    loading.classList.add('visible');
+    btn.disabled = true;
+    detener();
+
+    try {
+      const dampParam = (damp && ecuacion === 'onda2d') ? `&gamma=${gamma}` : '';
+      const excParam  = (exc  && ecuacion === 'onda2d') ? `&formaExcitacion=${formaExc}&frecExcitacion=${frecExc}` : '';
+      const modoParam = (inicial === 'modo') ? `&modoA=${modoA}&modoB=${modoB}` : '';
+      const res = await fetch(`/solve?ecuacion=${ecuacion}&L=${L}&T=${T}&c=${c}&inicial=${inicial}${dampParam}${excParam}${modoParam}`);
+      if (res.status === 429) {
+        const err = await res.json().catch(() => ({}));
+        const seg = err.waitSeconds ? ` Esperá ${err.waitSeconds}s.` : '';
+        toast('Demasiadas solicitudes.' + seg, true);
+        return;
+      }
+      if (!res.ok) { toast('Parámetros inválidos', true); return; }
+      const data = await res.json();
+      matrizU        = data.result;
+      ecuacionActual = data.ecuacion;
+      T_actual       = T;
+      MS_PF          = T * 1000 / matrizU.length;
+      frameActual    = 0;
+      // Invalidar cache de índices
+      cachedII = null; cachedJJ = null; cachedNx = 0; cachedNy = 0;
+      document.getElementById('placeholder').style.display = 'none';
+      document.getElementById('btnPlay').disabled = false;
+      document.getElementById('btnReset').disabled = false;
+      dibujarFrame(0);
+      toast('Mostrando: ' + ecuacion + '  L=' + L + '  T=' + T + 's');
+    } catch (_) {
+      toast('Error de conexion', true);
+    } finally {
+      loading.classList.remove('visible');
+      if (!vizBloqueada) btn.disabled = false;
+    }
+  }
+
+  function bloquearViz(bloquear) {
+    vizBloqueada = bloquear;
+    ['vEcuacion','vL','vT','vC','vInicial'].forEach(id => {
+      document.getElementById(id).disabled = bloquear;
+    });
+    document.getElementById('btnCalcular').disabled = bloquear;
+  }
+
+  // ── COLORMAP CALOR ───────────────────────────────
+  // Gamma 0.55 suaviza la transición entre valores bajos (gris) y el rango naranja/rojo,
+  // evitando el salto abrupto que se veía en bordes calientes.
+  const HEAT_STOPS = [
+    [0.00,  80,  80,  80], // gris       — 0°
+    [0.25, 255, 230,   0], // amarillo   — 25°
+    [0.55, 255, 140,   0], // naranja    — 50°
+    [1.00, 220,   0,   0], // rojo       — 100°
+  ];
+
+  function heatRGB(v) {
+    v = Math.max(0, Math.min(1, v));
+    v = Math.pow(v, 0.55); // gamma: suaviza transición
+    for (let i = 0; i < HEAT_STOPS.length - 1; i++) {
+      const [t0,r0,g0,b0] = HEAT_STOPS[i];
+      const [t1,r1,g1,b1] = HEAT_STOPS[i+1];
+      if (v <= t1) {
+        const f = (v - t0) / (t1 - t0);
+        return [Math.round(r0+f*(r1-r0)), Math.round(g0+f*(g1-g0)), Math.round(b0+f*(b1-b0))];
+      }
+    }
+    return [220, 0, 0];
+  }
+
+  function heatStr(v, shade) {
+    const [r,g,b] = heatRGB(v);
+    const s = 0.30 + shade * 0.70;
+    return `rgb(${Math.round(r*s)},${Math.round(g*s)},${Math.round(b*s)})`;
+  }
+
+  // ── 3D RENDERER ──────────────────────────────────
+  function rotP(wx, wy, wz) {
+    const cy = Math.cos(rotY), sy = Math.sin(rotY);
+    const rx = wx*cy + wz*sy, rz = -wx*sy + wz*cy;
+    const cx = Math.cos(rotX), sx = Math.sin(rotX);
+    return { x: rx, y: wy*cx - rz*sx, z: wy*sx + rz*cx };
+  }
+
+  function proj3(p, W, H, sc) {
+    const f = 4 / (4 + p.z + 3);
+    return { sx: W/2 + p.x*sc*f, sy: H/2 - p.y*sc*f, z: p.z };
+  }
+
+  function buildVerts(t) {
+    const grid = matrizU[t];
+    const Nx = grid.length, Ny = grid[0].length;
+    const si = Math.max(1, Math.ceil(Nx / 48));
+    const sj = Math.max(1, Math.ceil(Ny / 48));
+    const rows = [];
+    for (let i = 0; i < Nx; i += si) {
+      const row = [];
+      for (let j = 0; j < Ny; j += sj) {
+        row.push({ wx: i/(Nx-1)*2-1, wy: grid[i][j], wz: j/(Ny-1)*2-1 });
+      }
+      rows.push(row);
+    }
+    return rows;
+  }
+
+  function faceColor(v, shade) {
+    v = Math.max(-1, Math.min(1, v));
+    const s = 0.35 + shade * 0.65;
+    let r, g, b;
+    if (v >= 0) {
+      r = Math.round((0.22 + v*0.78)*255*s);
+      g = Math.round((1-v)*0.45*255*s);
+      b = Math.round((1-v)*0.31*255*s);
+    } else {
+      r = Math.round((1+v)*0.31*255*s);
+      g = Math.round((1+v)*0.45*255*s);
+      b = Math.round((0.22-v*0.78)*255*s);
+    }
+    return `rgb(${r},${g},${b})`;
+  }
+
+  function dibujarFrame(t) {
+    if (ecuacionActual === 'calor2d') dibujarPlaca(t);
+    else                              dibujar3D(t);
+  }
+
+  // ── ONDA 2D: superficie de altura ────────────────
+  function dibujar3D(t) {
+    const canvas = document.getElementById('waveCanvas');
+    const wrap   = canvas.parentElement;
+    if (canvas.width !== wrap.clientWidth || canvas.height !== wrap.clientHeight) {
+      canvas.width  = wrap.clientWidth;
+      canvas.height = wrap.clientHeight;
+    }
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+
+    const sc = Math.min(W, H) * 0.36;
+    const verts = buildVerts(t);
+    const R = verts.length, C = verts[0] ? verts[0].length : 0;
+    if (R < 2 || C < 2) { actualizarProgreso(t); return; }
+
+    const pv = verts.map(row => row.map(v => {
+      const r = rotP(v.wx, v.wy, v.wz);
+      return { ...proj3(r, W, H, sc), wy: v.wy };
+    }));
+
+    const LV = { x: 0.3, y: 0.8, z: 0.5 };
+    const faces = [];
+    for (let i = 0; i < R-1; i++) {
+      for (let j = 0; j < C-1; j++) {
+        const a = verts[i][j], b = verts[i+1][j], c = verts[i+1][j+1], d = verts[i][j+1];
+        const pa = pv[i][j], pb = pv[i+1][j], pc = pv[i+1][j+1], pd = pv[i][j+1];
+        const depth = (pa.z + pb.z + pc.z + pd.z) / 4;
+        const v1 = { x: c.wx-a.wx, y: c.wy-a.wy, z: c.wz-a.wz };
+        const v2 = { x: d.wx-b.wx, y: d.wy-b.wy, z: d.wz-b.wz };
+        const nx = v1.y*v2.z-v1.z*v2.y, ny = v1.z*v2.x-v1.x*v2.z, nz = v1.x*v2.y-v1.y*v2.x;
+        const nl = Math.sqrt(nx*nx+ny*ny+nz*nz) || 1;
+        const rn = rotP(nx/nl, ny/nl, nz/nl);
+        const shade = Math.max(0, Math.abs(rn.x*LV.x + rn.y*LV.y + rn.z*LV.z));
+        faces.push({ depth, pa, pb, pc, pd, shade, avgV: (a.wy+b.wy+c.wy+d.wy)/4 });
+      }
+    }
+    faces.sort((a, b) => b.depth - a.depth);
+    for (const f of faces) {
+      ctx.beginPath();
+      ctx.moveTo(f.pa.sx, f.pa.sy);
+      ctx.lineTo(f.pb.sx, f.pb.sy);
+      ctx.lineTo(f.pc.sx, f.pc.sy);
+      ctx.lineTo(f.pd.sx, f.pd.sy);
+      ctx.closePath();
+      ctx.fillStyle = faceColor(f.avgV, f.shade);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.06)';
+      ctx.lineWidth = 0.4;
+      ctx.stroke();
+    }
+
+    dibujarLeyendaOnda(ctx, W, H);
+    actualizarProgreso(t);
+  }
+
+  // Leyenda de amplitud para onda 2D
+  function dibujarLeyendaOnda(ctx, W, H) {
+    const bw = 14;
+    const bh = Math.min(140, H * 0.40);
+    const bx = W - 44;
+    const by = (H - bh) / 2;
+
+    // Gradiente rojo (positivo) → gris → azul (negativo)
+    const grad = ctx.createLinearGradient(0, by, 0, by + bh);
+    grad.addColorStop(0.00, 'rgb(200,40,20)');   // positivo máximo
+    grad.addColorStop(0.50, 'rgb(55,55,80)');    // cero
+    grad.addColorStop(1.00, 'rgb(20,40,200)');   // negativo máximo
+    ctx.fillStyle = grad;
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+    ctx.lineWidth = 0.8;
+    ctx.strokeRect(bx, by, bw, bh);
+
+    ctx.font = '9px DM Mono, monospace';
+    ctx.textAlign = 'right';
+    const ticks = [[0,'+1'],[0.5,'0'],[1,'−1']];
+    for (const [frac, label] of ticks) {
+      const y = by + frac * bh;
+      ctx.fillStyle = '#8a8270';
+      ctx.fillText(label, bx - 4, y + 3);
+      ctx.beginPath();
+      ctx.moveTo(bx, y); ctx.lineTo(bx - 3, y);
+      ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+    }
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#8a8270';
+    ctx.fillText('u', bx + bw / 2, by - 5);
+  }
+
+  // ── CALOR 2D: placa plana con color de temperatura ──
+  const PLATE_TH = 0.15;
+
+  // Precalcula los índices de subsampling para la grilla de calor.
+  // Solo se recalcula cuando cambia el tamaño de la grilla (nueva simulación).
+  function getIJ(Nx, Ny) {
+    if (cachedII && cachedNx === Nx && cachedNy === Ny) return { II: cachedII, JJ: cachedJJ };
+    const si = Math.max(1, Math.ceil(Nx / 48));
+    const sj = Math.max(1, Math.ceil(Ny / 48));
+    cachedII = []; for (let i = 0; i < Nx; i += si) cachedII.push(i);
+    cachedJJ = []; for (let j = 0; j < Ny; j += sj) cachedJJ.push(j);
+    cachedNx = Nx; cachedNy = Ny;
+    return { II: cachedII, JJ: cachedJJ };
+  }
+
+  function dibujarPlaca(t) {
+    const canvas = document.getElementById('waveCanvas');
+    const wrap   = canvas.parentElement;
+    if (canvas.width !== wrap.clientWidth || canvas.height !== wrap.clientHeight) {
+      canvas.width  = wrap.clientWidth;
+      canvas.height = wrap.clientHeight;
+    }
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+
+    const sc = Math.min(W, H) * 0.38;
+
+    const grid = matrizU[t];
+    const Nx = grid.length, Ny = grid[0].length;
+    const { II, JJ } = getIJ(Nx, Ny);
+    const ni = II.length, nj = JJ.length;
+
+    const gx  = ii => II[ii] / (Nx-1) * 2 - 1;
+    const gz  = jj => JJ[jj] / (Ny-1) * 2 - 1;
+    const gv  = (ii, jj) => grid[II[ii]][JJ[jj]];
+    const TH  = PLATE_TH;
+    const LV  = { x: 0.4, y: 0.8, z: 0.4 };
+
+    const PP = (wx, wy, wz) => { const r = rotP(wx, wy, wz); return proj3(r, W, H, sc); };
+
+    function shade4(ax,ay,az, bx,by,bz, cx,cy,cz, dx,dy,dz) {
+      const v1 = {x:cx-ax, y:cy-ay, z:cz-az}, v2 = {x:dx-bx, y:dy-by, z:dz-bz};
+      const nx=v1.y*v2.z-v1.z*v2.y, ny=v1.z*v2.x-v1.x*v2.z, nz=v1.x*v2.y-v1.y*v2.x;
+      const nl=Math.sqrt(nx*nx+ny*ny+nz*nz)||1;
+      const rn=rotP(nx/nl,ny/nl,nz/nl);
+      return Math.max(0, Math.abs(rn.x*LV.x+rn.y*LV.y+rn.z*LV.z));
+    }
+
+    function pushFace(faces, ax,ay,az, bx,by,bz, cx,cy,cz, dx,dy,dz, fillFn) {
+      const pa=PP(ax,ay,az), pb=PP(bx,by,bz), pc=PP(cx,cy,cz), pd=PP(dx,dy,dz);
+      const depth=(pa.z+pb.z+pc.z+pd.z)/4;
+      const sh=shade4(ax,ay,az, bx,by,bz, cx,cy,cz, dx,dy,dz);
+      faces.push({ depth, pa, pb, pc, pd, fill: fillFn(sh) });
+    }
+
+    const faces = [];
+
+    // Sombra proyectada (elipse debajo de la placa, en y=-TH-offset)
+    {
+      const shadowY = -TH - 0.05;
+      const corners = [[-1,shadowY,-1],[1,shadowY,-1],[1,shadowY,1],[-1,shadowY,1]];
+      const ps = corners.map(([x,y,z]) => PP(x, y, z));
+      const depth = ps.reduce((s,p) => s+p.z, 0) / 4 + 10; // siempre al fondo
+      faces.push({
+        depth,
+        pa: ps[0], pb: ps[1], pc: ps[2], pd: ps[3],
+        fill: 'rgba(0,0,0,0.10)'
+      });
+    }
+
+    // Cara superior — coloreada por temperatura
+    for (let ii = 0; ii < ni-1; ii++) {
+      for (let jj = 0; jj < nj-1; jj++) {
+        const avgV = (gv(ii,jj)+gv(ii+1,jj)+gv(ii+1,jj+1)+gv(ii,jj+1))/4;
+        pushFace(faces,
+          gx(ii),TH,gz(jj),  gx(ii+1),TH,gz(jj),  gx(ii+1),TH,gz(jj+1),  gx(ii),TH,gz(jj+1),
+          sh => heatStr(avgV, sh)
+        );
+      }
+    }
+
+    // Cara inferior — misma temperatura que la superior
+    for (let ii = 0; ii < ni-1; ii++) {
+      for (let jj = 0; jj < nj-1; jj++) {
+        const avgV = (gv(ii,jj)+gv(ii+1,jj)+gv(ii+1,jj+1)+gv(ii,jj+1))/4;
+        pushFace(faces,
+          gx(ii),-TH,gz(jj),  gx(ii+1),-TH,gz(jj),  gx(ii+1),-TH,gz(jj+1),  gx(ii),-TH,gz(jj+1),
+          sh => heatStr(avgV, sh)
+        );
+      }
+    }
+
+    // Cantos frontales y traseros — color del borde adyacente
+    for (let ii = 0; ii < ni-1; ii++) {
+      const x0=gx(ii), x1=gx(ii+1);
+      { const avgV=(gv(ii,0)+gv(ii+1,0))/2;
+        pushFace(faces, x0,TH,gz(0), x1,TH,gz(0), x1,-TH,gz(0), x0,-TH,gz(0), sh=>heatStr(avgV,sh)); }
+      { const avgV=(gv(ii,nj-1)+gv(ii+1,nj-1))/2;
+        pushFace(faces, x0,TH,gz(nj-1), x1,TH,gz(nj-1), x1,-TH,gz(nj-1), x0,-TH,gz(nj-1), sh=>heatStr(avgV,sh)); }
+    }
+
+    // Cantos laterales — color del borde adyacente
+    for (let jj = 0; jj < nj-1; jj++) {
+      const z0=gz(jj), z1=gz(jj+1);
+      { const avgV=(gv(0,jj)+gv(0,jj+1))/2;
+        pushFace(faces, gx(0),TH,z0, gx(0),TH,z1, gx(0),-TH,z1, gx(0),-TH,z0, sh=>heatStr(avgV,sh)); }
+      { const avgV=(gv(ni-1,jj)+gv(ni-1,jj+1))/2;
+        pushFace(faces, gx(ni-1),TH,z0, gx(ni-1),TH,z1, gx(ni-1),-TH,z1, gx(ni-1),-TH,z0, sh=>heatStr(avgV,sh)); }
+    }
+
+    faces.sort((a, b) => b.depth - a.depth);
+    for (const f of faces) {
+      ctx.beginPath();
+      ctx.moveTo(f.pa.sx, f.pa.sy);
+      ctx.lineTo(f.pb.sx, f.pb.sy);
+      ctx.lineTo(f.pc.sx, f.pc.sy);
+      ctx.lineTo(f.pd.sx, f.pd.sy);
+      ctx.closePath();
+      ctx.fillStyle = f.fill;
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.04)';
+      ctx.lineWidth = 0.3;
+      ctx.stroke();
+    }
+
+    dibujarLeyendaCalor(ctx, W, H);
+    actualizarProgreso(t);
+  }
+
+  function dibujarLeyendaCalor(ctx, W, H) {
+    const bw = 14;
+    const bh = Math.min(160, H * 0.45);
+    const bx = W - 44;
+    const by = (H - bh) / 2;
+
+    const grad = ctx.createLinearGradient(0, by + bh, 0, by);
+    grad.addColorStop(0.00, 'rgb(80,80,80)');
+    grad.addColorStop(0.25, 'rgb(255,230,0)');
+    grad.addColorStop(0.55, 'rgb(255,140,0)');
+    grad.addColorStop(1.00, 'rgb(220,0,0)');
+
+    ctx.fillStyle = grad;
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+    ctx.lineWidth = 0.8;
+    ctx.strokeRect(bx, by, bw, bh);
+
+    ctx.font = '9px DM Mono, monospace';
+    ctx.textAlign = 'right';
+    for (const [frac, label] of [[1,'100°'],[0.75,'75°'],[0.5,'50°'],[0.25,'25°'],[0,'0°']]) {
+      const y = by + bh - frac * bh;
+      ctx.fillStyle = '#8a8270';
+      ctx.fillText(label, bx - 4, y + 3);
+      ctx.beginPath();
+      ctx.moveTo(bx, y); ctx.lineTo(bx - 3, y);
+      ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+    }
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#8a8270';
+    ctx.font = '9px DM Mono, monospace';
+    ctx.fillText('°C', bx + bw / 2, by - 5);
+  }
+
+  function actualizarProgreso(t) {
+    frameActual = t;
+    const total = matrizU.length - 1;
+    const pct   = total > 0 ? (t / total) * 100 : 0;
+    const t_seg = total > 0 ? (t / total * T_actual).toFixed(1) : '0.0';
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('frameLabel').textContent = `t = ${t_seg}s / ${T_actual}s`;
+  }
+
+  function resetVista() {
+    rotX = -0.45; rotY = 0.55;
+    if (matrizU) dibujarFrame(frameActual);
+  }
+
+  // ── ÓRBITA (drag para rotar) ──────────────────
+  function initOrbitControls() {
+    const canvas = document.getElementById('waveCanvas');
+    const wrap   = canvas.parentElement;
+
+    canvas.addEventListener('mousedown', e => {
+      isDragging = true; lastMX = e.clientX; lastMY = e.clientY;
+      wrap.classList.add('dragging');
+    });
+    window.addEventListener('mouseup', () => { isDragging = false; wrap.classList.remove('dragging'); });
+    window.addEventListener('mousemove', e => {
+      if (!isDragging) return;
+      rotY += (e.clientX - lastMX) * 0.008;
+      rotX += (e.clientY - lastMY) * 0.008;
+      rotX = Math.max(-Math.PI/2+0.05, Math.min(Math.PI/2-0.05, rotX));
+      lastMX = e.clientX; lastMY = e.clientY;
+      if (matrizU) dibujarFrame(frameActual);
+    });
+
+    canvas.addEventListener('touchstart', e => {
+      isDragging = true; lastMX = e.touches[0].clientX; lastMY = e.touches[0].clientY;
+      e.preventDefault();
+    }, { passive: false });
+    window.addEventListener('touchend', () => isDragging = false);
+    window.addEventListener('touchmove', e => {
+      if (!isDragging || !e.touches[0]) return;
+      rotY += (e.touches[0].clientX - lastMX) * 0.008;
+      rotX += (e.touches[0].clientY - lastMY) * 0.008;
+      rotX = Math.max(-Math.PI/2+0.05, Math.min(Math.PI/2-0.05, rotX));
+      lastMX = e.touches[0].clientX; lastMY = e.touches[0].clientY;
+      if (matrizU) dibujarFrame(frameActual);
+      e.preventDefault();
+    }, { passive: false });
+  }
+
+  // ── SCRUB (click + drag en barra de progreso) ──
+  let scrubbingActive = false;
+
+  function scrubAt(e) {
+    if (!matrizU) return;
+    const wrap = document.getElementById('progressWrap');
+    const rect  = wrap.getBoundingClientRect();
+    const pct   = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const t     = Math.round(pct * (matrizU.length - 1));
+    detener();
+    dibujarFrame(t);
+  }
+
+  document.getElementById('progressWrap').addEventListener('mousedown', e => {
+    scrubbingActive = true;
+    scrubAt(e);
+  });
+  window.addEventListener('mousemove', e => { if (scrubbingActive) scrubAt(e); });
+  window.addEventListener('mouseup',   () => { scrubbingActive = false; });
+
+  // ── ANIMACION ────────────────────────────────────
+  function animar(ts) {
+    if (!playing) return;
+    if (ts - lastTs >= MS_PF) {
+      lastTs = ts;
+      frameActual = (frameActual + 1) % matrizU.length;
+      dibujarFrame(frameActual);
+    }
+    rafId = requestAnimationFrame(animar);
+  }
+
+  function togglePlay() {
+    if (!matrizU) return;
+    playing ? detener() : iniciar();
+  }
+
+  function iniciar() {
+    playing = true;
+    lastTs  = 0;
+    document.getElementById('btnPlay').textContent = 'Pausa';
+    rafId = requestAnimationFrame(animar);
+  }
+
+  function detener() {
+    playing = false;
+    document.getElementById('btnPlay').textContent = 'Play';
+    if (rafId) cancelAnimationFrame(rafId);
+  }
+
+  window.addEventListener('resize', () => { if (matrizU) dibujarFrame(frameActual); });
+
+  initOrbitControls();
+
+  // ── HELPERS ──────────────────────────────────────
+  function h(s) {
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  let toastTimer;
+  function toast(msg, err = false) {
+    const el = document.getElementById('toast');
+    el.textContent  = msg;
+    el.style.color  = err ? '#a04a28' : '#3a6e3a';
+    el.style.borderColor = err ? '#d4a8a0' : '#b8d4b8';
+    el.classList.add('visible');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('visible'), 2800);
+  }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,12 @@
+# Los videos y el instalador Android se almacenan mediante Git LFS.
+*.mp4 filter=lfs diff=lfs merge=lfs -text
+*.apk filter=lfs diff=lfs merge=lfs -text
+
+# Mantener finales de línea consistentes en archivos de texto.
+*.md text eol=lf
+*.go text eol=lf
+*.mod text eol=lf
+*.sum text eol=lf
+*.cs text eol=lf
+*.json text eol=lf
+*.tex text eol=lf

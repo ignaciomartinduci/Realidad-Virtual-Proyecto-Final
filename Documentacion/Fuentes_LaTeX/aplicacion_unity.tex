@@ -1,0 +1,308 @@
+% ============================================================
+%  APLICACION MOVIL EN UNITY
+% ============================================================
+
+\section{Aplicación Móvil en Unity}
+
+La aplicación Android constituye el cliente interactivo del sistema. Su función es
+recibir los datos del estudiante, comunicarse con el servidor, transformar las
+soluciones numéricas en una representación tridimensional y administrar la interacción
+táctil y sensorial. La resolución por diferencias finitas se ejecuta exclusivamente en
+Go; el cliente no contiene una segunda implementación del método numérico. Esta
+separación evita resultados divergentes, reduce la carga del teléfono y permite
+actualizar los solvers sin recompilar el APK.
+
+El teléfono Android del estudiante cumple la función de IHM del proyecto. Se eligió
+porque constituye un recurso disponible
+para la totalidad de los alumnos de la cátedra, lo que permite desarrollar la actividad
+sin exigir la adquisición ni la disponibilidad de equipamiento adicional. La pantalla
+táctil recibe la identificación, los parámetros y la selección de nodos, mientras que
+la unidad de medición inercial (IMU) aporta la orientación utilizada para explorar la
+escena tridimensional. Esta decisión elimina la necesidad de un periférico externo y
+facilita el uso de la plataforma en la cátedra de Matemática Avanzada mediante un
+dispositivo de uso cotidiano. De manera complementaria, la aplicación conserva un
+modo estereoscópico para Google Cardboard. Este modo no altera el requisito principal:
+el teléfono por sí solo continúa siendo suficiente para realizar la actividad.
+
+\subsection{Entorno de desarrollo y organización por escenas}
+
+El proyecto se desarrolló con \textbf{Unity 6.4}, versión
+\texttt{6000.4.2f1}. Utiliza Universal Render Pipeline \texttt{17.4.0}, Input System
+\texttt{1.19.0}, uGUI \texttt{2.0.0}, TextMeshPro y Google Cardboard XR Plugin
+\cite{unityManual,cardboardQuickstart}. La
+dependencia de Cardboard permite ofrecer dos formas de visualización seleccionables
+durante la ejecución: pantalla plana monoscópica y pantalla estereoscópica para visor.
+
+El ejecutable incluye tres escenas:
+
+\begin{enumerate}
+    \item \textbf{MenuScene}: identificación, descubrimiento y registro.
+    \item \textbf{HelloCardboard}: ecuación de onda bidimensional.
+    \item \textbf{HeatPlate}: ecuación de calor bidimensional.
+\end{enumerate}
+
+La escena inicial es plana y táctil. Una vez confirmado el registro se carga la onda.
+Desde cada simulación existe un botón para cambiar de modelo, y la sincronización puede
+producir el mismo cambio automáticamente.
+
+Los componentes principales se resumen en la Tabla~\ref{tab:componentes-unity}.
+
+\begin{table}[H]
+\centering
+\caption{Componentes principales de la aplicación Unity.}
+\label{tab:componentes-unity}
+{\small
+\begin{tabular}{ll}
+\toprule
+\parbox[t]{4.3cm}{\textbf{Componente}} & \parbox[t]{9.2cm}{\textbf{Responsabilidad}} \\
+\midrule
+\parbox[t]{4.3cm}{\texttt{MenuController}} & \parbox[t]{9.2cm}{Descubrimiento UDP, registro HTTP y acceso.} \\
+\parbox[t]{4.3cm}{\texttt{ResponsiveMenuUI}} & \parbox[t]{9.2cm}{Construcción adaptable de la pantalla inicial.} \\
+\parbox[t]{4.3cm}{\texttt{CardboardStartup}} & \parbox[t]{9.2cm}{Arranque condicional de la cámara plana o del subsistema XR.} \\
+\parbox[t]{4.3cm}{\texttt{DisplayModeController}} & \parbox[t]{9.2cm}{Selección persistente entre pantalla plana y Google Cardboard.} \\
+\parbox[t]{4.3cm}{\texttt{MobileGyroscopeCamera}} & \parbox[t]{9.2cm}{Lectura, calibración y suavizado de sensores.} \\
+\parbox[t]{4.3cm}{\texttt{Membrana2D}} & \parbox[t]{9.2cm}{Petición y reproducción de la onda.} \\
+\parbox[t]{4.3cm}{\texttt{WaveParameterPanel}} & \parbox[t]{9.2cm}{Parámetros, altura y edición de nodos.} \\
+\parbox[t]{4.3cm}{\texttt{HeatPlate2D}} & \parbox[t]{9.2cm}{Petición y reproducción del calor.} \\
+\parbox[t]{4.3cm}{\texttt{HeatParameterPanel}} & \parbox[t]{9.2cm}{Parámetros térmicos y navegación.} \\
+\parbox[t]{4.3cm}{\raggedright\texttt{SimulationSync}\allowbreak\texttt{Coordinator}} & \parbox[t]{9.2cm}{Seguimiento del estado docente.} \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+Los paneles se construyen durante la ejecución. Esto concentra estilos, anclajes y
+eventos en componentes C\#, y reduce la dependencia de jerarquías serializadas.
+
+\subsection{Modos de visualización y sensores}
+
+La aplicación inicia el menú como una interfaz plana y, dentro de las escenas de
+simulación, permite alternar entre dos modos. El modo predeterminado presenta una sola
+imagen a pantalla completa y utiliza la IMU del teléfono, por lo cual no requiere un
+visor. El modo VR inicializa Google Cardboard XR, habilita el renderizado estereoscópico
+de URP y genera una imagen corregida para cada ojo. La selección se conserva al cambiar
+entre las escenas de onda y calor.
+
+\begin{lstlisting}[style=csharp, caption={Selección del modo de visualización.}]
+XRManagerSettings manager = XRGeneralSettings.Instance != null
+    ? XRGeneralSettings.Instance.Manager
+    : null;
+
+if (DisplayModeController.IsVrModeRequested)
+{
+    yield return StartCardboard(manager, mainCamera, displayMode);
+}
+else
+{
+    yield return StartFlatMode(manager, mainCamera, displayMode);
+}
+\end{lstlisting}
+
+En Android se prioriza \texttt{GameRotationVector}, que estima la orientación sin
+depender del norte magnético. Si no está disponible se usa \texttt{RotationVector};
+como último recurso se integran las velocidades angulares del giroscopio
+\cite{androidSensors}.
+
+Al ingresar se guarda la rotación inicial y se espera un intervalo breve antes de
+fijar la referencia. La rotación relativa es
+
+\begin{equation}
+q_r=q_0^{-1}q,
+\end{equation}
+
+donde $q$ es la actitud actual y $q_0$ la referencia. El orden expresa el movimiento
+en el sistema local inicial y evita intercambiar cabeceo y giro lateral en horizontal.
+Se conservan estos dos movimientos y se fija el alabeo en cero:
+
+\begin{equation}
+q_c=q_i\,q(\theta_x,\theta_y,0).
+\end{equation}
+
+La interpolación esférica utiliza
+
+\begin{equation}
+\lambda=1-e^{-s\Delta t},
+\end{equation}
+
+Aquí $q_i$ representa la orientación inicial de la cámara en la escena, antes de aplicar
+el movimiento relativo medido por el teléfono. El orden de multiplicación conserva esa
+orientación como referencia y aplica luego los ángulos relativos de cabeceo y giro
+lateral. En la expresión de suavizado, $s$ controla la respuesta del filtro. Así se
+mantiene la orientación original de la escena
+sin perder una respuesta natural al movimiento del teléfono.
+
+El seguimiento implementado es rotacional, con tres grados de libertad (3DoF): permite
+observar la escena al modificar la orientación, pero no determina la posición del
+teléfono en el espacio como lo haría un sistema de seis grados de libertad (6DoF). El
+campo de visión y la corrección óptica dependen del perfil del visor configurado por
+Cardboard, por lo que la aplicación no fija un valor angular único.
+
+En modo VR, el seguimiento de cabeza es provisto por Cardboard mediante el componente
+de seguimiento de pose de Unity. Los paneles táctiles planos se ocultan para no superponerse
+a las imágenes estereoscópicas y la cruz nativa de Cardboard permite regresar al modo
+plano. Esta variante deja preparada la visualización para quienes dispongan de un visor.
+La conexión de un mando externo y el mapeo de sus botones para recorrer paneles,
+seleccionar nodos y modificar parámetros se consideran una implementación futura; por
+lo tanto, el informe no los presenta como una capacidad concluida de la versión actual.
+
+\subsection{Menú de inicio adaptable}
+
+La pantalla de ingreso funciona en posición horizontal y se adapta a diferentes
+resoluciones, relaciones de aspecto, esquinas redondeadas y recortes de cámara. La
+columna izquierda presenta la identidad del simulador y una onda animada; la derecha
+contiene una tarjeta con nombre, legajo, estado del servidor y conexión.
+
+Fondo, tarjeta, bordes y onda se generan con componentes gráficos de Unity. No dependen
+de una captura fija y conservan nitidez. El \texttt{CanvasScaler} utiliza una referencia
+horizontal de $1920\times1080$ y combina ancho y altura:
+
+\begin{lstlisting}[style=csharp, caption={Escalado adaptable del menú.}]
+scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+scaler.referenceResolution = new Vector2(1920f, 1080f);
+scaler.screenMatchMode =
+    CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+scaler.matchWidthOrHeight = 0.5f;
+\end{lstlisting}
+
+La zona segura de Android se transforma en anclajes normalizados:
+
+\begin{equation}
+\boldsymbol{a}_{\min}=\left(\frac{x_{\min}}{W},\frac{y_{\min}}{H}\right),
+\qquad
+\boldsymbol{a}_{\max}=\left(\frac{x_{\max}}{W},\frac{y_{\max}}{H}\right).
+\end{equation}
+
+Para pantallas panorámicas se mantienen dos columnas equilibradas. En formatos
+cercanos a $4:3$, la identidad visual se estrecha y la tarjeta recibe mayor ancho.
+Los textos usan autoajuste, mientras que campos y botones conservan alturas táctiles.
+
+La IP manual permanece oculta durante el flujo normal. Un enlace la despliega cuando
+la red bloquea el broadcast. Durante la conexión se deshabilitan los campos, el botón
+cambia a \textit{CONECTANDO...} y un indicador muestra búsqueda, éxito o error.
+
+\subsection{Descubrimiento, registro y comunicación}
+
+Sin dirección manual, el cliente transmite
+\texttt{RVPROYECTO\_DISCOVER\_V1} por broadcast UDP al puerto \texttt{47777}. La
+respuesta identifica servicio y puerto HTTP; la IP se obtiene del origen del datagrama.
+La búsqueda espera $4{,}5$ segundos y requiere una red local común.
+
+Luego se envía \texttt{POST /register} con nombre y legajo. Dirección y datos se
+guardan en \texttt{PlayerPrefs}. La onda se carga solamente después de una respuesta
+satisfactoria.
+
+El descubrimiento y las peticiones HTTP fueron diseñados para una red local de aula.
+El tráfico no se cifra y \texttt{PlayerPrefs} se utiliza como almacenamiento de
+conveniencia, no como un mecanismo destinado a proteger información sensible. En
+consecuencia, la operación prevista requiere una red Wi-Fi conocida y controlada.
+
+Las simulaciones se solicitan con \texttt{UnityWebRequest} y JSON. El manifiesto
+Android declara \texttt{INTERNET} y \texttt{ACCESS\_NETWORK\_STATE}; además habilita
+HTTP local sin cifrar. El cliente conserva únicamente el cambio más reciente y espera
+$5{,}2$ segundos entre cálculos. Ante HTTP 429 reintenta automáticamente.
+
+\subsection{Estructura de datos y reproducción}
+
+Onda y calor reciben ancho, alto, número de cuadros y un arreglo lineal. Unity verifica
+
+\begin{equation}
+N_{valores}=N_xN_yN_t.
+\end{equation}
+
+El cuadro $k$ y nodo $i$ se localizan mediante
+
+\begin{equation}
+j=k(N_xN_y)+i.
+\end{equation}
+
+Si las dimensiones no coinciden, la respuesta se rechaza. La secuencia válida se
+reproduce a 30 cuadros por segundo con un acumulador basado en
+\texttt{Time.\allowbreak deltaTime}.
+
+Cada cuadro actualiza dos texturas: \texttt{\_MainTex} contiene el color y
+\texttt{\_Displacement} la elevación. Separarlas impide que el color científico altere
+la geometría.
+
+\begin{lstlisting}[style=csharp, caption={Validación de una grilla recibida.}]
+long expected = (long)result.width
+    * result.height * result.frameCount;
+
+if (result.width <= 0 || result.height <= 0 ||
+    result.frameCount <= 0 ||
+    expected != result.values.LongLength)
+{
+    return false;
+}
+\end{lstlisting}
+
+\subsection{Escena de la ecuación de onda}
+
+\texttt{Membrana2D} usa \texttt{POST /solve/wave2d}. El panel modifica $L$, $T$, $c$
+y condición gaussiana, sinusoidal, triangular o modal. Los modos usan índices $a$ y
+$b$ entre 1 y 5. También se habilitan amortiguamiento y excitación sinusoidal. La
+frecuencia natural mostrada es
+
+\begin{equation}
+f_{ab}=\frac{c}{2L}\sqrt{a^2+b^2},
+\end{equation}
+
+y la excitación enviada es $f_e=m_f f_{ab}$. Esto permite explorar la resonancia.
+
+La escala cromática usa azul para desplazamientos negativos, verde cerca del equilibrio
+y rojo para positivos. Se mezcla una cuadrícula clara y se dibujan ambas caras para
+observar la placa desde arriba o abajo.
+
+Cada vértice posee un punto blanco implementado con partículas. El punto muestrea la
+misma textura en la misma coordenada UV que el material, por lo cual permanece adherido
+a la superficie durante la evolución.
+
+\subsubsection{Condición inicial personalizada}
+
+El usuario puede pausar y editar nodos mediante el retículo central y el giro del
+teléfono. La elevación se transforma en desplazamiento y se extiende a vecinos dentro
+de un radio de pincel. Al confirmar se envían \texttt{initialWidth},
+\texttt{initialHeight} e \texttt{initialValues}. El servidor interpola la grilla y
+calcula la evolución. Ante una falla, la forma se conserva para reintentar.
+
+El panel y el control de altura pueden ocultarse. Los parámetros se envían después de
+un breve período sin escritura para evitar una petición por carácter.
+
+\subsection{Escena de la ecuación de calor}
+
+\texttt{HeatPlate2D} usa \texttt{POST /solve/heat2d}. El usuario controla $L$, $T$,
+difusividad $\alpha$ y condición inicial gaussiana, de bordes o de placa.
+
+Las temperaturas se normalizan en $[0,1]$. La escala recorre oscuro, amarillo, naranja
+y rojo. También se agrega una grilla y elevación moderada:
+
+\begin{equation}
+h=\operatorname{sat}\left(0{,}5+\eta T\right).
+\end{equation}
+
+El panel permite cambiar la altura y regresar a la onda.
+
+\subsection{Sincronización docente}
+
+\texttt{SimulationSyncCoordinator} persiste mediante \texttt{DontDestroyOnLoad} y
+consulta \texttt{GET /sync/status} cada $1{,}5$ segundos. La respuesta indica actividad,
+ecuación, parámetros y versión incremental.
+
+Si la ecuación publicada no coincide con la escena actual, Unity cambia de escena. Si
+coincide pero la versión cambió, solicita la nueva solución. El sondeo no ejecuta el
+solver por sí mismo y las versiones evitan aplicar repetidamente una orden.
+
+\begin{lstlisting}[style=csharp, caption={Cambio de escena sincronizado.}]
+string targetScene = status.ecuacion == "calor2d"
+    ? HeatScene
+    : WaveScene;
+
+if (SceneManager.GetActiveScene().name != targetScene)
+{
+    lastAppliedVersion = status.version;
+    SceneManager.LoadScene(targetScene);
+    yield break;
+}
+\end{lstlisting}
+
+Una interrupción no detiene la animación recibida: se omite esa consulta y se reintenta
+en el siguiente intervalo. Así, el profesor propaga un modelo común sin conexiones
+persistentes.

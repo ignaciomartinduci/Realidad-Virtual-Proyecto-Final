@@ -1,0 +1,157 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1900" viewBox="0 0 1400 1900">
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L12,6 L0,12 Z" fill="#111111"/>
+    </marker>
+    <style>
+      .title { font: 700 44px Arial, sans-serif; fill: #111111; }
+      .subtitle { font: 400 23px Arial, sans-serif; fill: #333333; }
+      .box-title { font: 700 28px Arial, sans-serif; fill: #ffffff; }
+      .section-title { font: 700 25px Arial, sans-serif; fill: #111111; }
+      .body { font: 400 21px Arial, sans-serif; fill: #111111; }
+      .small { font: 400 18px Arial, sans-serif; fill: #222222; }
+      .mono { font: 600 18px Consolas, monospace; fill: #111111; }
+      .arrow-label { font: 700 18px Arial, sans-serif; fill: #111111; }
+      .outer { fill: #ffffff; stroke: #111111; stroke-width: 3; }
+      .module { fill: #f2f2f2; stroke: #111111; stroke-width: 2.5; }
+      .header { fill: #111111; }
+      .network { fill: #e7e7e7; stroke: #111111; stroke-width: 2.5; }
+      .flow { fill: #ffffff; stroke: #111111; stroke-width: 2.2; }
+      .edge { fill: none; stroke: #111111; stroke-width: 4; marker-end: url(#arrow); }
+      .thin-edge { fill: none; stroke: #111111; stroke-width: 2.8; marker-end: url(#arrow); }
+      .dash { fill: none; stroke: #111111; stroke-width: 2.5; stroke-dasharray: 10 8; marker-end: url(#arrow); }
+      .label-bg { fill: #ffffff; stroke: #111111; stroke-width: 1.5; }
+    </style>
+  </defs>
+
+  <rect width="1400" height="1900" fill="#ffffff"/>
+  <text x="700" y="72" text-anchor="middle" class="title">Arquitectura e interconexión del sistema</text>
+  <text x="700" y="110" text-anchor="middle" class="subtitle">Plataforma educativa cliente-servidor para onda 2D y calor 2D</text>
+
+  <!-- Actores -->
+  <rect x="70" y="150" width="570" height="315" rx="12" class="outer"/>
+  <path d="M82 150 H628 Q640 150 640 162 V210 H70 V162 Q70 150 82 150 Z" class="header"/>
+  <text x="355" y="190" text-anchor="middle" class="box-title">DOCENTE - PANEL WEB</text>
+  <text x="105" y="250" class="section-title">Configuración y supervisión</text>
+  <text x="105" y="286" class="body">• Acceso autorizado desde el navegador</text>
+  <text x="105" y="322" class="body">• Selección de onda o calor y sus parámetros</text>
+  <text x="105" y="358" class="body">• Vista previa y publicación de la sincronización</text>
+  <text x="105" y="394" class="body">• Seguimiento de alumnos y exportación de registros</text>
+  <text x="105" y="430" class="small">Rol: coordina la actividad; no ejecuta el cálculo numérico.</text>
+
+  <rect x="760" y="150" width="570" height="315" rx="12" class="outer"/>
+  <path d="M772 150 H1318 Q1330 150 1330 162 V210 H760 V162 Q760 150 772 150 Z" class="header"/>
+  <text x="1045" y="190" text-anchor="middle" class="box-title">ALUMNOS - APLICACIÓN ANDROID</text>
+  <text x="795" y="250" class="section-title">Interacción y visualización en Unity</text>
+  <text x="795" y="286" class="body">• Menú adaptable: nombre, legajo y conexión</text>
+  <text x="795" y="322" class="body">• Pantalla plana con IMU o modo Google Cardboard XR</text>
+  <text x="795" y="358" class="body">• Onda y calor: color, desplazamiento, malla y nodos</text>
+  <text x="795" y="394" class="body">• Parámetros y edición táctil en modo plano</text>
+  <text x="795" y="430" class="small">Mando externo para Cardboard: implementación futura.</text>
+
+  <!-- Red y flujos externos -->
+  <rect x="70" y="540" width="1260" height="145" rx="12" class="network"/>
+  <text x="700" y="574" text-anchor="middle" class="section-title">RED LOCAL WI-FI</text>
+  <text x="700" y="606" text-anchor="middle" class="small">UDP 47777 para descubrimiento · HTTP TCP 8080 para API y panel</text>
+
+  <path d="M235 465 V690" class="edge"/>
+  <rect x="90" y="624" width="260" height="32" rx="5" class="label-bg"/>
+  <text x="220" y="647" text-anchor="middle" class="arrow-label">POST /admin/sync/set</text>
+
+  <path d="M475 690 V465" class="edge"/>
+  <rect x="370" y="642" width="270" height="32" rx="5" class="label-bg"/>
+  <text x="505" y="665" text-anchor="middle" class="arrow-label">Panel, alumnos y estado</text>
+
+  <path d="M925 465 V690" class="edge"/>
+  <rect x="760" y="624" width="274" height="32" rx="5" class="label-bg"/>
+  <text x="897" y="647" text-anchor="middle" class="arrow-label">Discover · register · solve</text>
+
+  <path d="M1165 690 V465" class="edge"/>
+  <rect x="1044" y="642" width="266" height="32" rx="5" class="label-bg"/>
+  <text x="1177" y="665" text-anchor="middle" class="arrow-label">Grillas JSON · sync/status</text>
+
+  <!-- Servidor -->
+  <rect x="70" y="700" width="1260" height="800" rx="14" class="outer"/>
+  <path d="M84 700 H1316 Q1330 700 1330 714 V775 H70 V714 Q70 700 84 700 Z" class="header"/>
+  <text x="700" y="744" text-anchor="middle" class="box-title">SERVIDOR GO - CÓMPUTO Y COORDINACIÓN CENTRAL</text>
+
+  <rect x="110" y="810" width="560" height="220" rx="10" class="module"/>
+  <text x="140" y="850" class="section-title">Comunicación y descubrimiento</text>
+  <text x="140" y="890" class="body">• API REST con Gin sobre TCP 8080</text>
+  <text x="140" y="925" class="body">• Broadcast UDP: RVPROYECTO_DISCOVER_V1</text>
+  <text x="140" y="960" class="mono">/register · /solve/wave2d · /solve/heat2d</text>
+  <text x="140" y="995" class="mono">/sync/status · /admin/*</text>
+
+  <rect x="730" y="810" width="560" height="220" rx="10" class="module"/>
+  <text x="760" y="850" class="section-title">Estado, validación y concurrencia</text>
+  <text x="760" y="890" class="body">• Mapa de alumnos y estado docente versionado</text>
+  <text x="760" y="925" class="body">• Autorización docente por IP y validación JSON</text>
+  <text x="760" y="960" class="body">• Lecturas seguras mediante RWMutex</text>
+  <text x="760" y="995" class="mono">Rate limiter: 1 solicitud cada 5 s / cliente</text>
+
+  <rect x="110" y="1070" width="560" height="300" rx="10" class="module"/>
+  <text x="140" y="1112" class="section-title">Solver de onda 2D</text>
+  <text x="140" y="1152" class="body">• Diferencias finitas explícitas</text>
+  <text x="140" y="1187" class="body">• Leapfrog de segundo orden en el tiempo</text>
+  <text x="140" y="1222" class="body">• Laplaciano centrado de cinco puntos</text>
+  <text x="140" y="1257" class="mono">CFL = c·dt/dx ≤ 1/√2</text>
+  <text x="140" y="1292" class="body">• Amortiguamiento, fuerza armónica y modos</text>
+  <text x="140" y="1327" class="body">• Condición inicial personalizada</text>
+
+  <rect x="730" y="1070" width="560" height="300" rx="10" class="module"/>
+  <text x="760" y="1112" class="section-title">Solver de calor 2D</text>
+  <text x="760" y="1152" class="body">• Diferencias finitas explícitas</text>
+  <text x="760" y="1187" class="body">• FTCS: Forward Time Centered Space</text>
+  <text x="760" y="1222" class="body">• Laplaciano centrado de cinco puntos</text>
+  <text x="760" y="1257" class="mono">r = α·dt/dx² ≤ 0,25</text>
+  <text x="760" y="1292" class="body">• Condiciones de Dirichlet fijas</text>
+  <text x="760" y="1327" class="body">• Gaussiana, placa o bordes calientes</text>
+
+  <path d="M390 1030 V1065" class="thin-edge"/>
+  <path d="M1010 1030 V1065" class="thin-edge"/>
+
+  <rect x="110" y="1405" width="1180" height="70" rx="10" class="module"/>
+  <text x="140" y="1435" class="section-title">Preparación de la respuesta</text>
+  <text x="520" y="1435" class="small">Submuestreo temporal (máx. 1000 cuadros) · values + width + height + frameCount</text>
+  <text x="700" y="1463" text-anchor="middle" class="mono">El servidor resuelve; Unity valida, representa y reproduce a 30 FPS.</text>
+
+  <!-- Secuencia -->
+  <text x="700" y="1560" text-anchor="middle" class="section-title">FLUJO PRINCIPAL DE UNA SIMULACIÓN</text>
+
+  <rect x="70" y="1600" width="205" height="105" rx="9" class="flow"/>
+  <text x="172" y="1638" text-anchor="middle" class="section-title">1. Conectar</text>
+  <text x="172" y="1672" text-anchor="middle" class="small">Descubrir y registrar</text>
+
+  <path d="M280 1652 H318" class="thin-edge"/>
+
+  <rect x="325" y="1600" width="205" height="105" rx="9" class="flow"/>
+  <text x="427" y="1638" text-anchor="middle" class="section-title">2. Configurar</text>
+  <text x="427" y="1672" text-anchor="middle" class="small">Enviar parámetros</text>
+
+  <path d="M535 1652 H573" class="thin-edge"/>
+
+  <rect x="580" y="1600" width="240" height="105" rx="9" class="flow"/>
+  <text x="700" y="1638" text-anchor="middle" class="section-title">3. Resolver en Go</text>
+  <text x="700" y="1672" text-anchor="middle" class="small">Onda o calor por DF</text>
+
+  <path d="M825 1652 H863" class="thin-edge"/>
+
+  <rect x="870" y="1600" width="205" height="105" rx="9" class="flow"/>
+  <text x="972" y="1638" text-anchor="middle" class="section-title">4. Responder</text>
+  <text x="972" y="1672" text-anchor="middle" class="small">Devolver grillas JSON</text>
+
+  <path d="M1080 1652 H1118" class="thin-edge"/>
+
+  <rect x="1125" y="1600" width="205" height="105" rx="9" class="flow"/>
+  <text x="1227" y="1638" text-anchor="middle" class="section-title">5. Visualizar</text>
+  <text x="1227" y="1672" text-anchor="middle" class="small">Animar en Unity</text>
+
+  <path d="M560 530 H840" class="dash"/>
+  <rect x="525" y="470" width="350" height="52" rx="5" class="label-bg"/>
+  <text x="700" y="492" text-anchor="middle" class="arrow-label">Sincronización docente</text>
+  <text x="700" y="515" text-anchor="middle" class="arrow-label">misma versión para todos</text>
+
+  <rect x="70" y="1750" width="1260" height="90" rx="10" class="network"/>
+  <text x="700" y="1786" text-anchor="middle" class="section-title">Principio de diseño</text>
+  <text x="700" y="1820" text-anchor="middle" class="body">El teléfono funciona como IHM; todo el método numérico se ejecuta exclusivamente en el servidor.</text>
+</svg>

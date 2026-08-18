@@ -1,0 +1,234 @@
+% ============================================================
+%  INSTALACION Y REPRODUCCION
+% ============================================================
+
+\section{Instalación y Reproducción del Sistema}
+\thispagestyle{fancy}
+
+Este capítulo describe el procedimiento para poner en funcionamiento el servidor,
+abrir el proyecto de Unity, generar la aplicación Android y reproducir una sesión
+completa entre profesor y estudiantes. Se considera que el usuario ya dispone en su
+computadora de las carpetas \texttt{Server} y \texttt{RealidadVirtual}. El teléfono
+no resuelve los métodos numéricos, sino que recibe del servidor los resultados que
+debe representar.
+
+\subsection{Requisitos previos}
+
+La instalación utiliza los elementos enumerados en la
+Tabla~\ref{tab:requisitos-instalacion}.
+
+\begin{table}[H]
+\centering
+\caption{Requisitos para reproducir el sistema.}
+\label{tab:requisitos-instalacion}
+{\small
+\begin{tabular}{ll}
+\toprule
+\parbox[t]{4.0cm}{\textbf{Elemento}} & \parbox[t]{9.5cm}{\textbf{Requisito}} \\
+\midrule
+\parbox[t]{4.0cm}{Equipo servidor} & \parbox[t]{9.5cm}{Windows, Linux o macOS, conectado a la misma red local que los teléfonos.} \\
+\parbox[t]{4.0cm}{Go} & \parbox[t]{9.5cm}{Versión \texttt{1.25.1}, de acuerdo con \texttt{Server/go.mod}.} \\
+\parbox[t]{4.0cm}{Unity} & \parbox[t]{9.5cm}{Unity \texttt{6000.4.2f1} con Android Build Support, Android SDK, NDK y OpenJDK.} \\
+\parbox[t]{4.0cm}{Teléfono} & \parbox[t]{9.5cm}{Android 8.0 (API 26) o superior, con pantalla táctil y sensor de orientación o giroscopio.} \\
+\parbox[t]{4.0cm}{Red} & \parbox[t]{9.5cm}{Punto de acceso Wi-Fi sin aislamiento entre clientes; TCP 8080 y UDP 47777 habilitados.} \\
+\parbox[t]{4.0cm}{Cable USB} & \parbox[t]{9.5cm}{Opcional; solo es necesario para instalar mediante ADB o depurar desde Unity.} \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+El teléfono cumple dos funciones: ejecuta el cliente Android y actúa como dispositivo
+IHM. Se seleccionó porque constituye un recurso disponible para la totalidad de los
+alumnos de la cátedra, lo que permite desarrollar la actividad con el curso completo
+sin requerir la adquisición ni el préstamo de equipamiento especializado. La
+interacción se realiza mediante la pantalla táctil y la IMU. No se requiere visor
+Cardboard ni controlador externo. De forma
+opcional puede utilizarse un Google Cardboard para activar la visualización
+estereoscópica. El manejo integral mediante un mando externo se propone como trabajo
+futuro y no forma parte de los requisitos para reproducir la versión entregada.
+
+\newpage
+\thispagestyle{fancy}
+\subsection{Preparación y ejecución del servidor}
+
+\subsubsection{Descarga de dependencias}
+
+Desde una terminal ubicada en \texttt{Server} se ejecuta:
+
+\begin{lstlisting}[basicstyle=\ttfamily\footnotesize, frame=single, numbers=none,
+caption={Preparación del servidor Go.}]
+go mod download
+go build
+\end{lstlisting}
+
+La primera orden descarga Gin y las dependencias declaradas por el módulo. La segunda
+comprueba que el servidor pueda compilarse en el equipo anfitrión.
+
+\subsubsection{Inicio mediante el lanzador gráfico}
+
+El modo recomendado se inicia desde la carpeta \texttt{Server} con:
+
+\begin{lstlisting}[basicstyle=\ttfamily\footnotesize, frame=single, numbers=none,
+caption={Inicio mediante el lanzador.}]
+go run .
+\end{lstlisting}
+
+El programa abre una página local de configuración. Se conserva el puerto
+\texttt{8080} y se pulsa el botón para iniciar. El lanzador muestra las direcciones IPv4
+del equipo; estas sirven para la conexión manual si el descubrimiento automático no
+está disponible.
+
+Como alternativa, el servidor puede iniciarse directamente, sin lanzador:
+
+\begin{lstlisting}[basicstyle=\ttfamily\footnotesize, frame=single, numbers=none,
+caption={Inicio directo del servidor.}]
+go run . -port 8080
+\end{lstlisting}
+
+Al arrancar se habilita la API HTTP en todas las interfaces de red y el respondedor de
+descubrimiento en UDP 47777. En Windows, si aparece una consulta del firewall, se debe
+permitir el acceso al menos para redes privadas. En una configuración manual se crean
+reglas de entrada para TCP 8080 y UDP 47777.
+
+\subsubsection{Verificación del panel docente}
+
+En el equipo servidor se abre \texttt{http://localhost:8080}. El profesor ingresa el
+código configurado en \texttt{main.go}; luego accede al panel, desde el cual puede ver
+clientes, calcular soluciones y publicar o detener una sincronización. Para evitar
+exponer credenciales en una distribución pública, se recomienda cambiar el código antes
+de desplegar el sistema fuera de la red de laboratorio.
+
+\subsection{Apertura y verificación del proyecto Unity}
+
+\begin{enumerate}
+    \item Abrir Unity Hub y comprobar que esté instalada la versión
+    \texttt{6000.4.2f1} con Android Build Support y sus herramientas.
+    \item Seleccionar \textit{Add project from disk} y elegir la carpeta
+    \texttt{RealidadVirtual}.
+    \item Esperar la importación de paquetes y la compilación de scripts.
+    \item Abrir \textit{File $>$ Build Profiles} y seleccionar Android. Si todavía no
+    está activo, utilizar \textit{Switch Platform}.
+    \item Verificar que las escenas aparezcan habilitadas en este orden:\\
+    {\small\texttt{MenuScene} $\rightarrow$ \texttt{HelloCardboard}
+    $\rightarrow$ \texttt{HeatPlate}.}
+\end{enumerate}
+
+El proyecto está configurado para orientación automática, pantalla completa, API
+mínima 26, permiso de Internet y tráfico HTTP en la red local. El identificador de
+paquete puede cambiarse en \textit{Player Settings} si el APK debe coexistir con otra
+compilación del mismo proyecto.
+
+\subsection{Prueba previa dentro del editor}
+
+Antes de generar el APK es conveniente comprobar el intercambio de datos
+cliente--servidor:
+
+\begin{enumerate}
+    \item Iniciar el servidor y dejarlo activo.
+    \item En Unity, abrir \texttt{MenuScene} y pulsar \textit{Play}.
+    \item Desplegar la dirección manual e ingresar
+    \texttt{http://127.0.0.1:8080}; el broadcast puede depender de la configuración
+    del editor y no es necesario para esta prueba local.
+    \item Completar nombre y legajo, y pulsar \textit{Conectar}.
+    \item Confirmar en el panel docente que el alumno fue registrado y verificar que
+    Unity cargue la escena de onda.
+    \item Cambiar parámetros de onda y calor. El cliente debe enviar la petición,
+    recibir todos los cuadros calculados y reproducirlos sin ejecutar el solver.
+\end{enumerate}
+
+La orientación por IMU no puede evaluarse de manera representativa con el ratón del
+editor. Esa verificación se completa en el teléfono.
+
+\subsection{Generación e instalación del APK}
+\label{sec:compilar-apk}
+
+\begin{enumerate}
+    \item En \textit{Build Profiles}, confirmar Android y las tres escenas.
+    \item En \textit{Edit $>$ Preferences $>$ External Tools}, utilizar las versiones
+    de JDK, SDK y NDK instaladas con Unity para evitar incompatibilidades de Gradle.
+    \item Pulsar \textit{Build}, elegir una carpeta de salida y guardar el archivo con
+    un nombre identificable, por ejemplo \texttt{RV\_aplicacion.apk}.
+    \item Copiar el APK al teléfono y permitir temporalmente la instalación desde esa
+    fuente, o activar depuración USB e instalarlo con ADB:
+\end{enumerate}
+
+\begin{lstlisting}[basicstyle=\ttfamily\footnotesize, frame=single, numbers=none,
+caption={Instalación opcional mediante ADB.}]
+adb install -r RV_aplicacion.apk
+\end{lstlisting}
+
+La opción \texttt{-r} conserva los datos de una versión anterior. Para una prueba
+completamente limpia se puede desinstalar previamente la aplicación desde Android.
+
+\newpage
+\thispagestyle{fancy}
+\subsection{Reproducción de una sesión completa}
+
+\begin{enumerate}
+    \item Conectar la computadora del profesor y todos los teléfonos a la misma red
+    Wi-Fi.
+    \item Iniciar el servidor y comprobar el panel docente.
+    \item Abrir la aplicación en cada teléfono, mantenerlo en horizontal, ingresar
+    nombre y legajo, y pulsar \textit{Conectar}.
+    \item Esperar la detección automática. Si no responde, desplegar el campo manual e
+    ingresar la IPv4 mostrada por el lanzador, por ejemplo
+    \texttt{http://192.168.1.20:8080}. En el teléfono nunca debe utilizarse
+    \texttt{localhost}, porque esa dirección identifica al propio dispositivo.
+    \item Confirmar desde el panel que todos los estudiantes aparecen registrados.
+    \item En cada cliente, modificar parámetros, pausar o editar nodos y solicitar una
+    nueva solución. Comprobar que la animación, la malla y el color se actualizan.
+    \item Desde el panel docente, elegir onda o calor, establecer sus constantes y
+    activar la sincronización. En aproximadamente 1,5 segundos, todos los clientes
+    deben cambiar al modelo y versión publicados.
+    \item Desactivar la sincronización y verificar que cada estudiante recupere el
+    control local de sus parámetros.
+\end{enumerate}
+
+Durante la exploración, el usuario gira el teléfono para orientar la cámara y utiliza
+la pantalla para operar paneles, mover la altura de la placa y seleccionar nodos. Esta
+combinación materializa la IHM prevista para la actividad de Matemática Avanzada.
+Si dispone de un Google Cardboard, puede pulsar \textit{MODO VR} antes de colocar el
+teléfono en el visor. La cruz nativa de Cardboard permite regresar posteriormente a la
+pantalla plana. En esta modalidad los paneles se ocultan, ya que su operación mediante
+un mando Bluetooth constituye una ampliación futura.
+
+\subsection{Diagnóstico de problemas frecuentes}
+
+\begin{table}[H]
+\centering
+\caption{Comprobaciones ante fallas de instalación o conexión.}
+\label{tab:diagnostico-instalacion}
+{\small
+\begin{tabular}{ll}
+\toprule
+\parbox[t]{4.2cm}{\textbf{Síntoma}} & \parbox[t]{9.3cm}{\textbf{Comprobación y corrección}} \\
+\midrule
+\parbox[t]{4.2cm}{El servidor no se detecta} & \parbox[t]{9.3cm}{Verificar la misma Wi-Fi, desactivar el aislamiento de clientes, habilitar UDP 47777 y probar la IPv4 manual.} \\
+\parbox[t]{4.2cm}{No se conecta por IP} & \parbox[t]{9.3cm}{Usar la IP de la computadora, no \texttt{localhost}; comprobar TCP 8080 y que el servidor continúe activo.} \\
+\parbox[t]{4.2cm}{HTTP 429} & \parbox[t]{9.3cm}{Esperar al menos cinco segundos. El servidor limita la frecuencia de cálculo y el cliente reintenta el último cambio.} \\
+\parbox[t]{4.2cm}{Gradle falla al compilar} & \parbox[t]{9.3cm}{Seleccionar JDK, SDK y NDK incluidos con Unity; confirmar Android Build Support y espacio libre.} \\
+\parbox[t]{4.2cm}{La escena no cambia} & \parbox[t]{9.3cm}{Revisar el orden de escenas y confirmar que el registro devolvió una respuesta satisfactoria.} \\
+\parbox[t]{4.2cm}{La orientación no responde} & \parbox[t]{9.3cm}{Confirmar que el dispositivo posea sensor de rotación o giroscopio, mantenerlo horizontal y reiniciar la escena para recalibrar.} \\
+\parbox[t]{4.2cm}{La sincronización no llega} & \parbox[t]{9.3cm}{Verificar \texttt{/sync/status}, la conectividad y que el profesor haya activado una nueva versión.} \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\newpage
+\thispagestyle{fancy}
+\subsection{Lista de verificación final}
+
+La reproducción se considera satisfactoria cuando se cumplen simultáneamente los
+siguientes puntos:
+
+\begin{itemize}
+    \item el panel docente abre y el servidor responde en la red local;
+    \item el teléfono descubre el servidor o se conecta mediante IPv4 manual;
+    \item el registro del alumno aparece en el panel;
+    \item onda y calor se calculan en Go y se reproducen en Unity;
+    \item la pantalla táctil y la IMU permiten operar la IHM en el teléfono;
+    \item los cambios docentes de modelo y parámetros se propagan a los clientes;
+    \item la aplicación permite alternar entre vista plana a pantalla completa y un
+    modo estereoscópico opcional para Google Cardboard;
+    \item la cruz nativa de Cardboard permite regresar al modo plano, mientras que el
+    control completo mediante mando queda documentado como trabajo futuro.
+\end{itemize}

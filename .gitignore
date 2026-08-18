@@ -1,0 +1,40 @@
+# Unity: carpetas y archivos generados localmente
+AplicacionUnity/[Ll]ibrary/
+AplicacionUnity/[Tt]emp/
+AplicacionUnity/[Oo]bj/
+AplicacionUnity/[Bb]uild/
+AplicacionUnity/[Bb]uilds/
+AplicacionUnity/[Ll]ogs/
+AplicacionUnity/[Uu]ser[Ss]ettings/
+AplicacionUnity/MemoryCaptures/
+AplicacionUnity/Recordings/
+AplicacionUnity/.vs/
+AplicacionUnity/.vscode/
+AplicacionUnity/*.csproj
+AplicacionUnity/*.sln
+AplicacionUnity/*.slnx
+AplicacionUnity/*.user
+
+# Servidor: binarios y archivos generados durante la ejecución
+Servidor/*.exe
+Servidor/*.test
+Servidor/*.out
+Servidor/*.log
+Servidor/*.xlsx
+
+# LaTeX: archivos auxiliares de compilación
+Documentacion/Fuentes_LaTeX/*.aux
+Documentacion/Fuentes_LaTeX/*.fdb_latexmk
+Documentacion/Fuentes_LaTeX/*.fls
+Documentacion/Fuentes_LaTeX/*.log
+Documentacion/Fuentes_LaTeX/*.out
+Documentacion/Fuentes_LaTeX/*.synctex.gz
+Documentacion/Fuentes_LaTeX/*.toc
+
+# Sistema operativo y editores
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*.tmp
+*~
